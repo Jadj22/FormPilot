@@ -65,6 +65,8 @@ export interface Profile {
   color: string;
   fields: FieldValue[];
   attachments?: FileAttachment[];
+  /** true = profil déjà utilisé → relégué en bas de liste dans le panneau */
+  used?: boolean;
 }
 
 export interface LearnedMapping {
@@ -77,13 +79,11 @@ export interface LearnedMapping {
 
 export interface SiteRule {
   hostname: string;
-  defaultProfileId?: string | null;
 }
 
 export interface VaultData {
-  version: 1;
+  version: 2;
   profiles: Profile[];
-  defaultProfileId: string | null;
   learnedMappings?: LearnedMapping[];
   siteRules?: SiteRule[];
 }
@@ -132,11 +132,36 @@ export type ContentResponse =
   | { ok: true; undone: boolean }
   | { ok: false; error: string };
 
+/** Shape of a legacy v1 vault (before migration). */
+interface LegacyVaultData {
+  version: 1;
+  profiles: Array<Profile & { used?: undefined }>;
+  defaultProfileId?: string | null;
+  learnedMappings?: LearnedMapping[];
+  siteRules?: Array<{ hostname: string; defaultProfileId?: string | null }>;
+}
+
+/**
+ * Migrate a vault from v1 to v2.
+ * - Drops defaultProfileId / siteRules.defaultProfileId
+ * - Adds used: false on every profile
+ */
+export function migrateVault(raw: LegacyVaultData | VaultData): VaultData {
+  if (raw.version === 2) return raw as VaultData;
+
+  const legacy = raw as LegacyVaultData;
+  return {
+    version: 2,
+    profiles: legacy.profiles.map((p) => ({ ...p, used: p.used ?? false })),
+    learnedMappings: legacy.learnedMappings ?? [],
+    siteRules: (legacy.siteRules ?? []).map(({ hostname }) => ({ hostname })),
+  };
+}
+
 export function emptyVault(): VaultData {
   return {
-    version: 1,
+    version: 2,
     profiles: [],
-    defaultProfileId: null,
     learnedMappings: [],
     siteRules: [],
   };
@@ -144,4 +169,9 @@ export function emptyVault(): VaultData {
 
 export function uid(): string {
   return crypto.randomUUID();
+}
+
+/** Sort profiles: unused first, used last. Stable within each group. */
+export function sortProfilesByUsage(profiles: Profile[]): Profile[] {
+  return [...profiles].sort((a, b) => Number(a.used ?? false) - Number(b.used ?? false));
 }

@@ -49,6 +49,8 @@ export const AUTHORIZED_TYPE_LABELS: Record<SemanticType, string> = {
   vatNumber: 'TVA',
   iban: 'IBAN',
   passportNumber: 'N° passeport',
+  idPhotoFile: 'Photo d\'identité',
+  idDocumentFile: 'Document d\'identité',
 };
 
 export const COUNTRIES = [

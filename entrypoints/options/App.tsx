@@ -3,11 +3,13 @@ import {
   createVault,
   destroyVault,
   exportVault,
+  getKeepUnlocked,
   importVault,
   isUnlocked,
   isVaultInitialized,
   loadVault,
   saveVault,
+  setKeepUnlocked,
   unlockVault,
   unlockWithRecoveryKey,
 } from '~/lib/vault';
@@ -39,11 +41,14 @@ export default function App() {
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   const [recoveryInput, setRecoveryInput] = useState('');
   const [useRecovery, setUseRecovery] = useState(false);
+  const [keepUnlocked, setKeepUnlockedState] = useState(false);
 
   useEffect(() => {
     (async () => {
       const init = await isVaultInitialized();
       setInitialized(init);
+      const ku = await getKeepUnlocked();
+      setKeepUnlockedState(ku);
       if (init && isUnlocked()) {
         setVault(await loadVault());
         setUnlocked(true);
@@ -93,11 +98,11 @@ export default function App() {
       name: 'Nouveau profil',
       color: '#0ea5e9',
       fields: [],
+      used: false,
     };
     await persist({
       ...vault,
       profiles: [...vault.profiles, profile],
-      defaultProfileId: vault.defaultProfileId ?? profile.id,
     });
     setSelectedId(profile.id);
   };
@@ -113,18 +118,13 @@ export default function App() {
   const removeProfile = async (id: string) => {
     if (!vault) return;
     const profiles = vault.profiles.filter((p) => p.id !== id);
-    await persist({
-      ...vault,
-      profiles,
-      defaultProfileId:
-        vault.defaultProfileId === id ? (profiles[0]?.id ?? null) : vault.defaultProfileId,
-    });
+    await persist({ ...vault, profiles });
     setSelectedId(null);
   };
 
-  const setDefault = async (id: string) => {
-    if (!vault) return;
-    await persist({ ...vault, defaultProfileId: id });
+  const handleKeepUnlockedChange = async (value: boolean) => {
+    setKeepUnlockedState(value);
+    await setKeepUnlocked(value);
   };
 
   const addField = (profile: Profile, type: SemanticType) => {
@@ -368,14 +368,30 @@ export default function App() {
                   />
                   {p.name}
                 </span>
-                {vault.defaultProfileId === p.id && (
-                  <span className="text-[10px] text-emerald-400">défaut</span>
+                {p.used && (
+                  <span className="text-[10px] text-neutral-500">utilisé</span>
                 )}
               </button>
             </li>
           ))}
         </ul>
         <div className="space-y-2 border-t border-neutral-800 pt-3">
+          {/* Keep-unlocked setting */}
+          <div className="rounded border border-neutral-800 bg-neutral-900/60 p-2 space-y-1">
+            <label className="flex cursor-pointer items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={keepUnlocked}
+                onChange={(e) => handleKeepUnlockedChange(e.target.checked)}
+                className="h-4 w-4 accent-sky-600"
+              />
+              <span className="text-neutral-200">Garder le coffre déverrouillé</span>
+            </label>
+            <p className="pl-6 text-[10px] text-neutral-500">
+              ⚠️ La clé reste en mémoire locale. Pratique sur un appareil personnel,
+              déconseillé sur un appareil partagé.
+            </p>
+          </div>
           <button
             onClick={handleExport}
             className="w-full rounded border border-neutral-700 px-2 py-1.5 text-xs hover:bg-neutral-900"
@@ -408,12 +424,6 @@ export default function App() {
                 }
                 className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm"
               />
-              <button
-                onClick={() => setDefault(selected.id)}
-                className="whitespace-nowrap rounded border border-neutral-700 px-2 py-1 text-xs hover:bg-neutral-900"
-              >
-                Définir par défaut
-              </button>
               <button
                 onClick={() => removeProfile(selected.id)}
                 className="whitespace-nowrap rounded border border-red-900 px-2 py-1 text-xs text-red-400 hover:bg-red-950"

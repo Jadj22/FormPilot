@@ -7,7 +7,7 @@ import {
   toBase64,
   fromBase64,
 } from './crypto';
-import { emptyVault, type LearnedMapping, type VaultData } from './types';
+import { emptyVault, migrateVault, type LearnedMapping, type VaultData } from './types';
 
 interface WrappedKey {
   iv: string;
@@ -35,11 +35,72 @@ class VaultDB extends Dexie {
 
 const db = new VaultDB();
 const VAULT_ID = 1;
+const KEEP_UNLOCKED_KEY = 'formpilot_keepUnlocked';
 
 let sessionKey: CryptoKey | null = null;
 let autoLockTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const AUTO_LOCK_MINUTES = 15;
+
+// ── Keep-unlocked preference ──────────────────────────────────────────────────
+
+/** Read the "keep unlocked" flag from browser.storage.local (non-blocking). */
+export async function getKeepUnlocked(): Promise<boolean> {
+  try {
+    const result = await browser.storage.local.get(KEEP_UNLOCKED_KEY);
+    return (result as Record<string, unknown>)[KEEP_UNLOCKED_KEY] === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Persist the "keep unlocked" flag. */
+export async function setKeepUnlocked(value: boolean): Promise<void> {
+  try {
+    await browser.storage.local.set({ [KEEP_UNLOCKED_KEY]: value });
+  } catch {
+    // ignore (non-Chrome environments)
+  }
+}
+
+// ── Persisted session key (keep-unlocked mode) ───────────────────────────────
+
+/**
+ * When keepUnlocked is true we persist the raw DEK in chrome.storage.local.
+ * This is a deliberate security trade-off: the key is accessible to any
+ * extension code but NOT to web pages or other extensions.
+ */
+const PERSISTED_KEY_KEY = 'formpilot_sessionKeyRaw';
+
+async function persistSessionKey(key: CryptoKey): Promise<void> {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  const b64 = toBase64(new Uint8Array(raw as ArrayBuffer));
+  await browser.storage.local.set({ [PERSISTED_KEY_KEY]: b64 });
+}
+
+async function loadPersistedSessionKey(): Promise<CryptoKey | null> {
+  try {
+    const result = await browser.storage.local.get(PERSISTED_KEY_KEY);
+    const b64: string | undefined = (result as Record<string, unknown>)[PERSISTED_KEY_KEY] as string | undefined;
+    if (!b64) return null;
+    return crypto.subtle.importKey('raw', fromBase64(b64) as unknown as BufferSource, 'AES-GCM', false, [
+      'encrypt',
+      'decrypt',
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+async function clearPersistedSessionKey(): Promise<void> {
+  try {
+    await browser.storage.local.remove(PERSISTED_KEY_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+// ── Key wrapping helpers ──────────────────────────────────────────────────────
 
 async function wrapKey(wrappingKey: CryptoKey, keyRaw: Uint8Array): Promise<WrappedKey> {
   const iv = randomBytes(12);
@@ -63,6 +124,8 @@ async function unwrapKey(wrappingKey: CryptoKey, wrapped: WrappedKey): Promise<C
   ]);
 }
 
+// ── Auto-lock ─────────────────────────────────────────────────────────────────
+
 function scheduleAutoLock(): void {
   if (autoLockTimer) clearTimeout(autoLockTimer);
   autoLockTimer = setTimeout(
@@ -72,6 +135,8 @@ function scheduleAutoLock(): void {
     AUTO_LOCK_MINUTES * 60 * 1000,
   );
 }
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 export async function isVaultInitialized(): Promise<boolean> {
   const row = await db.vault.get(VAULT_ID);
@@ -86,6 +151,7 @@ export function lock(): void {
   sessionKey = null;
   if (autoLockTimer) clearTimeout(autoLockTimer);
   autoLockTimer = null;
+  clearPersistedSessionKey();
 }
 
 function generateRecoveryKey(): string {
@@ -124,7 +190,14 @@ export async function createVault(
     data,
   });
   sessionKey = dek;
-  scheduleAutoLock();
+
+  const keepUnlocked = await getKeepUnlocked();
+  if (keepUnlocked) {
+    await persistSessionKey(dek);
+  } else {
+    scheduleAutoLock();
+  }
+
   return { recoveryKey };
 }
 
@@ -135,7 +208,14 @@ export async function unlockVault(password: string): Promise<boolean> {
   try {
     const dek = await unwrapKey(kek, JSON.parse(row.wrappedKey) as WrappedKey);
     sessionKey = dek;
-    scheduleAutoLock();
+
+    const keepUnlocked = await getKeepUnlocked();
+    if (keepUnlocked) {
+      await persistSessionKey(dek);
+    } else {
+      scheduleAutoLock();
+    }
+
     return true;
   } catch {
     return false;
@@ -149,19 +229,44 @@ export async function unlockWithRecoveryKey(recoveryKey: string): Promise<boolea
   try {
     const dek = await unwrapKey(rek, JSON.parse(row.recoveryWrappedKey) as WrappedKey);
     sessionKey = dek;
-    scheduleAutoLock();
+
+    const keepUnlocked = await getKeepUnlocked();
+    if (keepUnlocked) {
+      await persistSessionKey(dek);
+    } else {
+      scheduleAutoLock();
+    }
+
     return true;
   } catch {
     return false;
   }
 }
 
+/**
+ * Try to restore the session key from chrome.storage.local (keepUnlocked mode).
+ * Call this at startup before isUnlocked() to transparently resume the session.
+ */
+export async function tryRestoreSession(): Promise<boolean> {
+  if (sessionKey) return true;
+  const keepUnlocked = await getKeepUnlocked();
+  if (!keepUnlocked) return false;
+  const key = await loadPersistedSessionKey();
+  if (!key) return false;
+  sessionKey = key;
+  return true;
+}
+
 export async function loadVault(): Promise<VaultData> {
   if (!sessionKey) throw new Error('Vault is locked');
   const row = await db.vault.get(VAULT_ID);
   if (!row) throw new Error('Vault not initialized');
-  scheduleAutoLock();
-  return decryptJSON<VaultData>(sessionKey, { iv: row.iv, data: row.data });
+
+  const keepUnlocked = await getKeepUnlocked();
+  if (!keepUnlocked) scheduleAutoLock();
+
+  const raw = await decryptJSON<VaultData>(sessionKey, { iv: row.iv, data: row.data });
+  return migrateVault(raw as Parameters<typeof migrateVault>[0]);
 }
 
 export async function saveVault(data: VaultData): Promise<void> {
@@ -170,7 +275,9 @@ export async function saveVault(data: VaultData): Promise<void> {
   if (!row) throw new Error('Vault not initialized');
   const { iv, data: encrypted } = await encryptJSON(sessionKey, data);
   await db.vault.put({ ...row, iv, data: encrypted });
-  scheduleAutoLock();
+
+  const keepUnlocked = await getKeepUnlocked();
+  if (!keepUnlocked) scheduleAutoLock();
 }
 
 /**
@@ -261,6 +368,13 @@ export async function importVault(json: string, password: string): Promise<boole
     iv: parsed.iv,
     data: parsed.data,
   });
-  scheduleAutoLock();
+
+  const keepUnlocked = await getKeepUnlocked();
+  if (keepUnlocked) {
+    await persistSessionKey(dek);
+  } else {
+    scheduleAutoLock();
+  }
+
   return true;
 }

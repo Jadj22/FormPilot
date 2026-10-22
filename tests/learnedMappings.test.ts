@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { getFieldSignature } from '~/lib/detection/classify';
 import type { DetectedField, LearnedMapping } from '~/lib/types';
@@ -107,58 +107,59 @@ describe('applyLearnedMappings', () => {
   });
 
   it('applies mapping by label', () => {
-    const [result] = applyLearnedMappings(
+    const result = applyLearnedMappings(
       [makeField({ label: 'Champ test', type: null })],
       'example.com',
       [makeMapping({ fieldSignature: 'label:champ test', type: 'firstName' })],
-    );
+    )[0]!;
+
     expect(result.type).toBe('firstName');
     expect(result.confidence).toBe(100);
     expect(result.isLearned).toBe(true);
   });
 
   it('applies mapping by name attribute', () => {
-    const [result] = applyLearnedMappings(
+    const result = applyLearnedMappings(
       [makeField({ label: 'X', name: 'email_field', type: null })],
       'example.com',
       [makeMapping({ fieldSignature: 'name:email_field', type: 'email' })],
-    );
+    )[0]!;
     expect(result.type).toBe('email');
   });
 
   it('applies mapping by id attribute', () => {
-    const [result] = applyLearnedMappings(
+    const result = applyLearnedMappings(
       [makeField({ id: 'birth_date', label: 'Quelque chose', type: null })],
       'example.com',
       [makeMapping({ fieldSignature: 'id:birth_date', type: 'birthDate' })],
-    );
+    )[0]!;
     expect(result.type).toBe('birthDate');
   });
 
   it('ignores mappings from a different host', () => {
-    const [result] = applyLearnedMappings(
+    const result = applyLearnedMappings(
       [makeField()],
       'example.com',
       [makeMapping({ hostname: 'other.com' })],
-    );
+    )[0]!;
     expect(result.type).toBeNull();
   });
 
   it('matches subdomains against base hostname', () => {
-    const [result] = applyLearnedMappings(
+    const result = applyLearnedMappings(
       [makeField()],
       'tickets.example.com',
       [makeMapping({ hostname: 'example.com' })],
-    );
+    )[0]!;
     expect(result.isLearned).toBe(true);
   });
 
   it('does not match sibling domains', () => {
-    const [result] = applyLearnedMappings(
+    const result = applyLearnedMappings(
       [makeField()],
       'example.com',
       [makeMapping({ hostname: 'evil-example.com' })],
-    );
+    )[0]!;
     expect(result.type).toBeNull();
   });
 });
