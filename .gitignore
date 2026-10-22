@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.output/
+.wxt/
+.tmp/
+test-results/
+*.local
+.DS_Store

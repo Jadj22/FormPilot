@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fixture — Formulaire type Weezevent</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; }
+      label { display: block; margin-top: 0.75rem; font-size: 0.875rem; }
+      input, select { width: 100%; padding: 0.4rem; margin-top: 0.2rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Inscription — Coordonnées</h1>
+    <form id="coords" action="https://example.com/submit" method="post">
+      <label>Nom de famille
+        <input type="text" name="lastname" />
+      </label>
+      <label>Prénom
+        <input type="text" name="firstname" />
+      </label>
+      <label>Adresse e-mail
+        <input type="email" name="email" />
+      </label>
+      <label>Téléphone portable
+        <input type="tel" name="phone" />
+      </label>
+      <label>Adresse
+        <input type="text" name="address1" />
+      </label>
+      <label>Code postal
+        <input type="text" name="zip" />
+      </label>
+      <label>Ville
+        <input type="text" name="city" />
+      </label>
+      <label>Pays
+        <select name="country">
+          <option value="">—</option>
+          <option value="TG">Togo</option>
+          <option value="FR">France</option>
+        </select>
+      </label>
+      <label>Date de naissance
+        <input type="date" name="birthdate" />
+      </label>
+      <label>Numéro de passeport
+        <input type="text" name="passport" />
+      </label>
+      <label>Date d'expiration du document
+        <input type="date" name="expiry" />
+      </label>
+      <p style="margin-top: 1.5rem">
+        <button type="submit">Envoyer</button>
+      </p>
+    </form>
+    <script>
+      document.getElementById('coords').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        document.title = 'Soumis';
+        const pre = document.createElement('pre');
+        pre.id = 'result';
+        pre.textContent = JSON.stringify(data, null, 2);
+        document.body.appendChild(pre);
+      });
+    </script>
+  </body>
+</html>

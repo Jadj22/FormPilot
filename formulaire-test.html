@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FormPilot — Formulaire de test (tous les champs)</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f8;
+        --card: #fff;
+        --border: #d8dee6;
+        --text: #1a1f26;
+        --muted: #5c6b7a;
+        --accent: #0284c7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+      }
+      header {
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 1.25rem 1.5rem;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+      header p {
+        margin: 0.35rem 0 0;
+        font-size: 0.875rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1.25rem 1.35rem 1.5rem;
+        margin-bottom: 1.25rem;
+      }
+      section h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        color: var(--accent);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem 1rem;
+      }
+      .full {
+        grid-column: 1 / -1;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      input,
+      select {
+        font: inherit;
+        font-weight: 400;
+        color: var(--text);
+        padding: 0.5rem 0.65rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+      }
+      input:focus,
+      select:focus {
+        outline: 2px solid #7dd3fc;
+        border-color: var(--accent);
+      }
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+        border-radius: 8px;
+        padding: 0.65rem 1.1rem;
+        border: 1px solid transparent;
+      }
+      button[type='submit'] {
+        background: var(--accent);
+        color: #fff;
+      }
+      button[type='reset'] {
+        background: #fff;
+        border-color: var(--border);
+      }
+      #result {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #ecfdf5;
+        border: 1px solid #6ee7b7;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      #result.visible {
+        display: block;
+      }
+      .hint {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin: 0 0 1rem;
+      }
+      @media (max-width: 640px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Formulaire de test FormPilot</h1>
+      <p>
+        Tous les champs du profil · ouvrez ce fichier dans Chrome, puis utilisez
+        l’extension pour détecter et remplir.
+      </p>
+    </header>
+
+    <main>
+      <p class="hint">
+        Astuce : après remplissage, cliquez <strong>Afficher les valeurs</strong>
+        pour vérifier ce que FormPilot a saisi (aucun envoi réel).
+      </p>
+
+      <form id="test-form" action="#" method="post" novalidate>
+        <section>
+          <h2>Identité</h2>
+          <div class="grid">
+            <label
+              >Civilité
+              <select name="civility" id="civility" autocomplete="honorific-prefix">
+                <option value="">—</option>
+                <option value="M.">M.</option>
+                <option value="Mme">Mme</option>
+                <option value="Mx">Mx</option>
+              </select>
+            </label>
+            <label
+              >Genre
+              <select name="gender" id="gender" autocomplete="sex">
+                <option value="">—</option>
+                <option value="femme">Femme</option>
+                <option value="homme">Homme</option>
+                <option value="autre">Autre</option>
+              </select>
+            </label>
+            <label
+              >Prénom
+              <input type="text" name="first_name" id="first_name" autocomplete="given-name" />
+            </label>
+            <label
+              >Nom
+              <input type="text" name="last_name" id="last_name" autocomplete="family-name" />
+            </label>
+            <label
+              >Date de naissance
+              <input type="date" name="birth_date" id="birth_date" autocomplete="bday" />
+            </label>
+            <label
+              >Nationalité
+              <input
+                type="text"
+                name="nationality"
+                id="nationality"
+                autocomplete="off"
+                placeholder="ex. Togolaise"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Contact</h2>
+          <div class="grid">
+            <label class="full"
+              >E-mail
+              <input type="email" name="email" id="email" autocomplete="email" />
+            </label>
+            <label
+              >Téléphone mobile
+              <input type="tel" name="phone_mobile" id="phone_mobile" autocomplete="tel" />
+            </label>
+            <label
+              >Téléphone fixe
+              <input type="tel" name="phone_home" id="phone_home" autocomplete="tel-local" />
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Adresse</h2>
+          <div class="grid">
+            <label class="full"
+              >Adresse
+              <input
+                type="text"
+                name="address_line1"
+                id="address_line1"
+                autocomplete="address-line1"
+              />
+            </label>
+            <label class="full"
+              >Complément d’adresse
+              <input
+                type="text"
+                name="address_line2"
+                id="address_line2"
+                autocomplete="address-line2"
+              />
+            </label>
+            <label
+              >Code postal
+              <input
+                type="text"
+                name="postal_code"
+                id="postal_code"
+                autocomplete="postal-code"
+              />
+            </label>
+            <label
+              >Ville
+              <input type="text" name="city" id="city" autocomplete="address-level2" />
+            </label>
+            <label
+              >Région
+              <input type="text" name="region" id="region" autocomplete="address-level1" />
+            </label>
+            <label
+              >Pays
+              <select name="country" id="country" autocomplete="country">
+                <option value="">—</option>
+                <option value="TG">Togo</option>
+                <option value="FR">France</option>
+                <option value="BJ">Bénin</option>
+                <option value="CI">Côte d’Ivoire</option>
+                <option value="SN">Sénégal</option>
+                <option value="CA">Canada</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Entreprise / professionnel</h2>
+          <div class="grid">
+            <label
+              >Entreprise
+              <input
+                type="text"
+                name="company_name"
+                id="company_name"
+                autocomplete="organization"
+              />
+            </label>
+            <label
+              >Poste
+              <input
+                type="text"
+                name="job_title"
+                id="job_title"
+                autocomplete="organization-title"
+              />
+            </label>
+            <label
+              >SIRET
+              <input type="text" name="siret" id="siret" inputmode="numeric" />
+            </label>
+            <label
+              >N° TVA
+              <input type="text" name="vat_number" id="vat_number" />
+            </label>
+            <label class="full"
+              >IBAN
+              <input type="text" name="iban" id="iban" autocomplete="off" />
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Documents d’identité</h2>
+          <div class="grid">
+            <label
+              >N° passeport
+              <input type="text" name="passport_number" id="passport_number" />
+            </label>
+            <label
+              >N° carte d’identité
+              <input type="text" name="id_card_number" id="id_card_number" />
+            </label>
+            <label
+              >Date d’émission
+              <input type="date" name="id_issue_date" id="id_issue_date" />
+            </label>
+            <label
+              >Date d’expiration
+              <input type="date" name="id_expiry_date" id="id_expiry_date" />
+            </label>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button type="submit">Afficher les valeurs</button>
+          <button type="reset">Vider le formulaire</button>
+        </div>
+      </form>
+
+      <pre id="result" aria-live="polite"></pre>
+    </main>
+
+    <script>
+      const form = document.getElementById('test-form');
+      const result = document.getElementById('result');
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        result.textContent = JSON.stringify(data, null, 2);
+        result.classList.add('visible');
+      });
+
+      form.addEventListener('reset', () => {
+        result.classList.remove('visible');
+        result.textContent = '';
+      });
+    </script>
+  </body>
+</html>
