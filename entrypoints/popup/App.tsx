@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import {
   addLearnedMappings,
   createVault,
@@ -20,7 +20,7 @@ import type {
 } from '~/lib/types';
 import { uid } from '~/lib/types';
 
-// ─── Local types ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Local types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Transient per-field override set by the user in the detected view. */
 interface FieldOverride {
@@ -45,38 +45,38 @@ type ViewState =
   | { kind: 'filled'; profiles: Profile[]; count: number; profileId: string }
   | { kind: 'error'; message: string };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const TYPE_LABELS: Record<string, string> = {
-  firstName: 'Prénom',
+  firstName: 'PrÃ©nom',
   lastName: 'Nom',
   fullName: 'Nom complet',
-  civility: 'Civilité',
+  civility: 'CivilitÃ©',
   email: 'E-mail',
-  phoneMobile: 'Téléphone mobile',
-  phoneHome: 'Téléphone fixe',
+  phoneMobile: 'TÃ©lÃ©phone mobile',
+  phoneHome: 'TÃ©lÃ©phone fixe',
   addressLine1: 'Adresse',
-  addressLine2: 'Complément',
+  addressLine2: 'ComplÃ©ment',
   city: 'Ville',
   postalCode: 'Code postal',
-  region: 'Région',
+  region: 'RÃ©gion',
   country: 'Pays',
   birthDate: 'Date de naissance',
-  nationality: 'Nationalité',
+  nationality: 'NationalitÃ©',
   gender: 'Genre',
   companyName: 'Entreprise',
   siret: 'SIRET',
   vatNumber: 'TVA',
   iban: 'IBAN',
   jobTitle: 'Poste',
-  passportNumber: 'N° passeport',
-  idCardNumber: "N° pièce d'identité",
-  idIssueDate: "Date d'émission",
+  passportNumber: 'NÂ° passeport',
+  idCardNumber: "NÂ° piÃ¨ce d'identitÃ©",
+  idIssueDate: "Date d'Ã©mission",
   idExpiryDate: "Date d'expiration",
   birthCountry: 'Pays de naissance',
   birthCity: 'Ville de naissance',
   languages: 'Langue(s) usuelle(s)',
-  residence: 'Résidence',
+  residence: 'RÃ©sidence',
 };
 
 const SEMANTIC_TYPE_OPTIONS = Object.entries(TYPE_LABELS).map(([value, label]) => ({
@@ -84,7 +84,7 @@ const SEMANTIC_TYPE_OPTIONS = Object.entries(TYPE_LABELS).map(([value, label]) =
   label,
 }));
 
-// ─── Pure helpers ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Pure helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function defaultFirst(vault: VaultData): Profile[] {
   const id = vault.defaultProfileId;
@@ -127,9 +127,9 @@ function proposedValue(
   effectiveType: SemanticType | null,
   currentValue: string,
 ): string {
-  if (!profile) return currentValue || '—';
+  if (!profile) return currentValue || 'â€”';
   const val = resolveValue(profile, effectiveType);
-  if (!val) return currentValue || '—';
+  if (!val) return currentValue || 'â€”';
   if (
     effectiveType === 'birthDate' ||
     effectiveType === 'idIssueDate' ||
@@ -140,7 +140,7 @@ function proposedValue(
   return val;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function App() {
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
@@ -152,7 +152,7 @@ export default function App() {
   /** Non-null when the MutationObserver detected a step change while popup is open. */
   const [pendingStep, setPendingStep] = useState<{ detected: DetectedField[]; warnings: string[] } | null>(null);
 
-  // ── Init ───────────────────────────────────────────────────────────────────
+  // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     (async () => {
@@ -173,7 +173,7 @@ export default function App() {
     })();
   }, []);
 
-  // ── Step-change listener (FR-20) ──────────────────────────────────────────
+  // â”€â”€ Step-change listener (FR-20) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     const onMessage = (msg: ContentPushMessage) => {
@@ -189,12 +189,12 @@ export default function App() {
       );
   }, []);
 
-  // ── Auth handlers ──────────────────────────────────────────────────────────
+  // â”€â”€ Auth handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleSetup = useCallback(async () => {
     setError('');
     if (password.length < 8) {
-      setError('Le mot de passe doit faire au moins 8 caractères.');
+      setError('Le mot de passe doit faire au moins 8 caractÃ¨res.');
       return;
     }
     if (password !== password2) {
@@ -219,7 +219,7 @@ export default function App() {
     setPassword('');
   }, [password]);
 
-  // ── Detect ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Detect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleDetect = useCallback(async () => {
     setError('');
@@ -240,7 +240,7 @@ export default function App() {
       }>({ type: 'DETECT', learnedMappings });
 
       if (!resp.ok || !resp.detected) {
-        setError(resp.error ?? 'Détection impossible sur cette page.');
+        setError(resp.error ?? 'DÃ©tection impossible sur cette page.');
         return;
       }
 
@@ -261,7 +261,7 @@ export default function App() {
     }
   }, []);
 
-  // ── Fill ───────────────────────────────────────────────────────────────────
+  // â”€â”€ Fill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleFill = useCallback(
     async (fields: DetectedField[], profileId: string) => {
@@ -328,7 +328,7 @@ export default function App() {
     [view, overrides],
   );
 
-  // ── Undo ───────────────────────────────────────────────────────────────────
+  // â”€â”€ Undo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleUndo = useCallback(async () => {
     try {
@@ -342,7 +342,7 @@ export default function App() {
     }
   }, []);
 
-  // ── Field selection helpers ────────────────────────────────────────────────
+  // â”€â”€ Field selection helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const toggleField = (key: string) => {
     setView((v) => {
@@ -361,7 +361,7 @@ export default function App() {
     });
   };
 
-  // ── Override helpers ───────────────────────────────────────────────────────
+  // â”€â”€ Override helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const setFieldOverrideType = (key: string, type: SemanticType | null) => {
     setOverrides((prev) => ({
@@ -377,23 +377,23 @@ export default function App() {
     }));
   };
 
-  // ─── Views ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Views â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (view.kind === 'loading') {
-    return <div className="p-4 text-sm text-neutral-400">Chargement…</div>;
+    return <div className="p-4 text-sm text-neutral-400">Chargementâ€¦</div>;
   }
 
   if (view.kind === 'setup') {
     return (
-      <div className="w-80 space-y-3 p-4">
-        <h1 className="text-base font-semibold">Créer le coffre</h1>
+      <div className="w-full max-w-sm space-y-3 p-4">
+        <h1 className="text-base font-semibold">CrÃ©er le coffre</h1>
         <p className="text-xs text-neutral-400">
-          Choisissez un mot de passe maître. Il chiffre toutes vos données localement.
+          Choisissez un mot de passe maÃ®tre. Il chiffre toutes vos donnÃ©es localement.
         </p>
         <input
           type="password"
           className="w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm"
-          placeholder="Mot de passe maître"
+          placeholder="Mot de passe maÃ®tre"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -409,14 +409,14 @@ export default function App() {
           onClick={handleSetup}
           className="w-full rounded bg-sky-600 py-1.5 text-sm font-medium hover:bg-sky-500"
         >
-          Créer
+          CrÃ©er
         </button>
         <button
           type="button"
           onClick={() => browser.runtime.openOptionsPage()}
           className="block w-full text-center text-xs text-sky-400 hover:underline"
         >
-          Gérer les profils dans les options
+          GÃ©rer les profils dans les options
         </button>
       </div>
     );
@@ -424,11 +424,11 @@ export default function App() {
 
   if (view.kind === 'recovery') {
     return (
-      <div className="w-80 space-y-3 p-4">
-        <h1 className="text-base font-semibold">Clé de récupération</h1>
+      <div className="w-full max-w-sm space-y-3 p-4">
+        <h1 className="text-base font-semibold">ClÃ© de rÃ©cupÃ©ration</h1>
         <p className="text-xs text-amber-400">
-          Notez cette clé et conservez-la en lieu sûr. Sans mot de passe ni clé, vos données sont
-          irrécupérables. Elle n&apos;est plus affichée ensuite.
+          Notez cette clÃ© et conservez-la en lieu sÃ»r. Sans mot de passe ni clÃ©, vos donnÃ©es sont
+          irrÃ©cupÃ©rables. Elle n&apos;est plus affichÃ©e ensuite.
         </p>
         <code className="block select-all break-all rounded border border-neutral-700 bg-neutral-900 p-2 text-xs text-emerald-400">
           {view.recoveryKey}
@@ -437,7 +437,7 @@ export default function App() {
           onClick={() => navigator.clipboard.writeText(view.recoveryKey)}
           className="w-full rounded border border-neutral-700 py-1.5 text-sm hover:bg-neutral-900"
         >
-          Copier la clé
+          Copier la clÃ©
         </button>
         <button
           onClick={async () => {
@@ -446,7 +446,7 @@ export default function App() {
           }}
           className="w-full rounded bg-sky-600 py-1.5 text-sm font-medium hover:bg-sky-500"
         >
-          J&apos;ai noté ma clé — Continuer
+          J&apos;ai notÃ© ma clÃ© â€” Continuer
         </button>
       </div>
     );
@@ -454,12 +454,12 @@ export default function App() {
 
   if (view.kind === 'locked') {
     return (
-      <div className="w-80 space-y-3 p-4">
-        <h1 className="text-base font-semibold">Coffre verrouillé</h1>
+      <div className="w-full max-w-sm space-y-3 p-4">
+        <h1 className="text-base font-semibold">Coffre verrouillÃ©</h1>
         <input
           type="password"
           className="w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm"
-          placeholder="Mot de passe maître"
+          placeholder="Mot de passe maÃ®tre"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
@@ -470,7 +470,7 @@ export default function App() {
           onClick={handleUnlock}
           className="w-full rounded bg-sky-600 py-1.5 text-sm font-medium hover:bg-sky-500"
         >
-          Déverrouiller
+          DÃ©verrouiller
         </button>
       </div>
     );
@@ -478,7 +478,7 @@ export default function App() {
 
   if (view.kind === 'ready') {
     return (
-      <div className="w-80 space-y-3 p-4">
+      <div className="w-full max-w-sm space-y-3 p-4">
         <div className="flex items-center justify-between">
           <h1 className="text-base font-semibold">FormPilot</h1>
           <button
@@ -490,7 +490,7 @@ export default function App() {
         </div>
         {view.profiles.length === 0 ? (
           <p className="text-xs text-amber-400">
-            Aucun profil. Ouvrez les options pour en créer un.
+            Aucun profil. Ouvrez les options pour en crÃ©er un.
           </p>
         ) : (
           <>
@@ -502,7 +502,7 @@ export default function App() {
               onClick={handleDetect}
               className="w-full rounded bg-sky-600 py-1.5 text-sm font-medium hover:bg-sky-500"
             >
-              Détecter les champs
+              DÃ©tecter les champs
             </button>
           </>
         )}
@@ -531,17 +531,17 @@ export default function App() {
     };
 
     return (
-      <div className="w-80 space-y-2 p-4">
+      <div className="w-full max-w-sm space-y-2 p-4">
         <h1 className="text-base font-semibold">
-          Aperçu ({selectedCount}/{view.fields.length})
+          AperÃ§u ({selectedCount}/{view.fields.length})
         </h1>
 
         {/* Step-change banner */}
         {pendingStep && (
           <div className="flex items-center justify-between gap-2 rounded border border-sky-700 bg-sky-950/60 px-2 py-1.5">
             <p className="text-[11px] text-sky-300">
-              🔄 Nouvelle étape ({pendingStep.detected.length} champ
-              {pendingStep.detected.length > 1 ? 's' : ''} détecté
+              ðŸ”„ Nouvelle Ã©tape ({pendingStep.detected.length} champ
+              {pendingStep.detected.length > 1 ? 's' : ''} dÃ©tectÃ©
               {pendingStep.detected.length > 1 ? 's' : ''})
             </p>
             <div className="flex shrink-0 gap-1">
@@ -550,7 +550,7 @@ export default function App() {
                 onClick={applyStepChange}
                 className="rounded bg-sky-600 px-2 py-0.5 text-[11px] font-medium hover:bg-sky-500"
               >
-                Rafraîchir
+                RafraÃ®chir
               </button>
               <button
                 type="button"
@@ -558,7 +558,7 @@ export default function App() {
                 className="text-[11px] text-neutral-500 hover:text-neutral-300"
                 title="Ignorer"
               >
-                ✕
+                âœ•
               </button>
             </div>
           </div>
@@ -584,7 +584,7 @@ export default function App() {
           <div className="space-y-1 rounded border border-amber-700 bg-amber-950/50 p-2">
             {view.warnings.map((w) => (
               <p key={w} className="text-[11px] text-amber-400">
-                ⚠ {w}
+                âš  {w}
               </p>
             ))}
           </div>
@@ -595,13 +595,13 @@ export default function App() {
             Tout cocher
           </button>
           <button type="button" onClick={() => setAllFields(false)} className="text-neutral-400 hover:underline">
-            Tout décocher
+            Tout dÃ©cocher
           </button>
         </div>
 
         <div className="max-h-72 space-y-1.5 overflow-y-auto">
           {view.fields.length === 0 ? (
-            <p className="text-xs text-amber-400">Aucun champ détecté sur cette page.</p>
+            <p className="text-xs text-amber-400">Aucun champ dÃ©tectÃ© sur cette page.</p>
           ) : (
             view.fields.map((f) => {
               const override = overrides[f.key];
@@ -626,13 +626,13 @@ export default function App() {
                       <div className="flex items-center gap-1 text-xs text-neutral-200">
                         <span className="truncate">{f.label}</span>
                         {f.isLearned && (
-                          <span title="Règle mémorisée pour ce site" className="shrink-0 text-[10px]">
-                            🧠
+                          <span title="RÃ¨gle mÃ©morisÃ©e pour ce site" className="shrink-0 text-[10px]">
+                            ðŸ§ 
                           </span>
                         )}
                       </div>
                       <div className="truncate text-[11px] text-sky-300/90">
-                        → {proposedValue(profile, effectiveType, f.value)}
+                        â†’ {proposedValue(profile, effectiveType, f.value)}
                       </div>
                     </div>
                   </label>
@@ -650,7 +650,7 @@ export default function App() {
                         );
                       }}
                     >
-                      <option value="__none__">— non reconnu —</option>
+                      <option value="__none__">â€” non reconnu â€”</option>
                       {SEMANTIC_TYPE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
@@ -664,7 +664,7 @@ export default function App() {
                         checked={override?.memorize ?? false}
                         onChange={() => toggleFieldMemorize(f.key, effectiveType)}
                       />
-                      Mémoriser
+                      MÃ©moriser
                     </label>
                   </div>
 
@@ -675,7 +675,7 @@ export default function App() {
                     </span>
                     {hasOverride && (
                       <span className="text-[10px] text-amber-400">
-                        ✎ {TYPE_LABELS[effectiveType ?? ''] ?? '—'}
+                        âœŽ {TYPE_LABELS[effectiveType ?? ''] ?? 'â€”'}
                       </span>
                     )}
                   </div>
@@ -710,7 +710,7 @@ export default function App() {
 
   if (view.kind === 'error') {
     return (
-      <div className="w-80 space-y-3 p-4">
+      <div className="w-full max-w-sm space-y-3 p-4">
         <h1 className="text-base font-semibold text-red-400">Erreur</h1>
         <p className="text-xs text-neutral-400">{view.message}</p>
       </div>
@@ -719,12 +719,12 @@ export default function App() {
 
   // kind === 'filled'
   return (
-    <div className="w-80 space-y-3 p-4">
+    <div className="w-full max-w-sm space-y-3 p-4">
       <h1 className="text-base font-semibold">
         {view.count} champ{view.count > 1 ? 's' : ''} rempli{view.count > 1 ? 's' : ''}
       </h1>
       <p className="text-xs text-neutral-400">
-        Vérifiez le formulaire, puis envoyez-le vous-même.
+        VÃ©rifiez le formulaire, puis envoyez-le vous-mÃªme.
       </p>
       <button
         onClick={handleUndo}
@@ -735,3 +735,4 @@ export default function App() {
     </div>
   );
 }
+

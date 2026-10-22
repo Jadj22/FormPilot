@@ -8,10 +8,13 @@ export default defineConfig({
     description:
       "Remplissez automatiquement les formulaires web à partir de profils chiffrés, avec aperçu et confirmation.",
     version: '0.1.0',
-    permissions: ['storage', 'activeTab', 'scripting', 'tabs'],
-    host_permissions: ['*://*.weezevent.com/*'],
+    permissions: ['storage', 'activeTab', 'scripting', 'tabs', 'sidePanel'],
+    host_permissions: ['<all_urls>'],
     action: {
       default_title: 'FormPilot',
+    },
+    side_panel: {
+      default_path: 'sidepanel/index.html',
     },
     commands: {
       'fill-form': {

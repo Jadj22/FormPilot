@@ -11,7 +11,7 @@ import {
   unlockVault,
   unlockWithRecoveryKey,
 } from '~/lib/vault';
-import { uid, type FieldValue, type Profile, type SemanticType, type VaultData } from '~/lib/types';
+import { uid, type FieldValue, type FileAttachment, type Profile, type SemanticType, type VaultData } from '~/lib/types';
 
 import {
   AUTHORIZED_FIELD_TYPES,
@@ -148,6 +148,38 @@ export default function App() {
     updateProfile({
       ...profile,
       fields: profile.fields.filter((f) => f.id !== fieldId),
+    });
+  };
+
+  // ── FR-21: attachment handlers ─────────────────────────────────────────────────
+
+  const addAttachment = (profile: Profile, file: File, type: FileAttachment['type']) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const attachment: FileAttachment = {
+        id: uid(),
+        type,
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        dataUrl,
+        sizeBytes: file.size,
+      };
+      updateProfile({
+        ...profile,
+        attachments: [
+          ...(profile.attachments ?? []).filter((a) => a.type !== type),
+          attachment,
+        ],
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeAttachment = (profile: Profile, attachmentId: string) => {
+    updateProfile({
+      ...profile,
+      attachments: (profile.attachments ?? []).filter((a) => a.id !== attachmentId),
     });
   };
 
@@ -565,8 +597,73 @@ export default function App() {
                 ))}
               </select>
             )}
+
+            {/* ── FR-21: Pièces jointes ───────────────────────────────── */}
+            <div className="mt-6 border-t border-neutral-800 pt-4">
+              <h3 className="mb-3 text-sm font-semibold text-neutral-300">
+                📎 Pièces jointes (auto-upload)
+              </h3>
+              <p className="mb-3 text-xs text-neutral-500">
+                Les fichiers sont chiffrés dans le coffre et injectés automatiquement
+                dans les champs <code>input[type=file]</code> des formulaires.
+              </p>
+
+              {(
+                [
+                  { key: 'idPhotoFile', label: 'Photo d\'identité (passeport / CNI recto)' },
+                  { key: 'idDocumentFile', label: 'Document d\'identité complet (PDF ou image)' },
+                ] as { key: FileAttachment['type']; label: string }[]
+              ).map(({ key, label }) => {
+                const current = selected.attachments?.find((a) => a.type === key);
+                return (
+                  <div key={key} className="mb-3 rounded border border-neutral-700 bg-neutral-900 p-3">
+                    <p className="mb-1.5 text-xs font-medium text-neutral-400">{label}</p>
+                    {current ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-lg">
+                            {current.mimeType.startsWith('image/') ? '🖼️' : '📄'}
+                          </span>
+                          <span className="truncate text-xs text-neutral-300">{current.name}</span>
+                          <span className="shrink-0 text-[10px] text-neutral-500">
+                            {(current.sizeBytes / 1024).toFixed(1)} Ko
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(selected, current.id)}
+                          className="shrink-0 rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-900/30"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex cursor-pointer flex-col items-center gap-1 rounded border-2 border-dashed border-neutral-700 px-3 py-3 text-center text-xs text-neutral-500 hover:border-indigo-600 hover:text-indigo-400">
+                        <span className="text-xl">⬆️</span>
+                        <span>Cliquer ou glisser un fichier ici</span>
+                        <span className="text-[10px]">JPG, PNG, PDF — max 5 Mo</span>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && file.size <= 5 * 1024 * 1024) {
+                              addAttachment(selected, file, key);
+                            } else if (file) {
+                              setError('Fichier trop volumineux (max 5 Mo).');
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
+
       </main>
     </div>
   );

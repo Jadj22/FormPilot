@@ -27,7 +27,10 @@ export type SemanticType =
   | 'birthCountry'
   | 'birthCity'
   | 'languages'
-  | 'residence';
+  | 'residence'
+  /** FR-21 — file attachments */
+  | 'idPhotoFile'
+  | 'idDocumentFile';
 
 export const SENSITIVE_TYPES: SemanticType[] = [
   'iban',
@@ -46,11 +49,22 @@ export interface FieldValue {
   value: string;
 }
 
+/** Encrypted binary attachment stored in the vault (base64 data URL). */
+export interface FileAttachment {
+  id: string;
+  type: 'idPhotoFile' | 'idDocumentFile';
+  name: string;      // original filename
+  mimeType: string;  // e.g. 'image/jpeg', 'application/pdf'
+  dataUrl: string;   // base64 data: URL
+  sizeBytes: number;
+}
+
 export interface Profile {
   id: string;
   name: string;
   color: string;
   fields: FieldValue[];
+  attachments?: FileAttachment[];
 }
 
 export interface LearnedMapping {
@@ -92,6 +106,10 @@ export interface FillItem {
   overrideValue?: string;
   overrideType?: SemanticType | null;
   saveRuleForHost?: string;
+  /** FR-21: base64 data URL to inject into input[type=file] */
+  fileDataUrl?: string;
+  fileMimeType?: string;
+  fileName?: string;
 }
 
 export type ContentRequest =

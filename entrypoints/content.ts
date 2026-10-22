@@ -4,6 +4,7 @@ import {
   refreshFieldCache,
 } from '~/lib/detection/classify';
 import {
+  applyFileValue,
   applyValue,
   restore,
   snapshot,
@@ -28,8 +29,11 @@ let undoStack: UndoEntry[] = [];
 let lastLearnedMappings: LearnedMapping[] = [];
 let stepObserver: MutationObserver | null = null;
 let stepDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let floatingBtn: HTMLElement | null = null;
+let floatDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const STEP_DEBOUNCE_MS = 400;
+const FLOAT_DELAY_MS = 800;
 
 function applyLearnedMappings(
   fields: DetectedField[],
@@ -185,14 +189,37 @@ async function handleFill(items: FillItem[], profile: Profile): Promise<ContentR
   undoStack = [];
   const onWeezevent = isWeezeventHost(location.hostname);
   let filled = 0;
+
   for (const item of items) {
     if (!item.selected) continue;
     const raw = getRawField(item.key);
     if (!raw) continue;
     const detected = lastDetection.find((d) => d.key === item.key);
     const type = item.overrideType ?? detected?.type ?? null;
-    const baseValue =
-      item.overrideValue ?? resolveValue(profile, type);
+
+    // ─ FR-21: input[type=file] branch ───────────────────────────────────────
+    if (raw.el instanceof HTMLInputElement && raw.el.type === 'file') {
+      // Explicit override dataUrl from FillItem, or resolve from profile attachments
+      const dataUrl =
+        item.fileDataUrl ??
+        profile.attachments?.find((a) => a.type === type)?.dataUrl;
+      const mimeType =
+        item.fileMimeType ??
+        profile.attachments?.find((a) => a.type === type)?.mimeType ??
+        'application/octet-stream';
+      const fileName =
+        item.fileName ??
+        profile.attachments?.find((a) => a.type === type)?.name ??
+        'document';
+      if (dataUrl) {
+        undoStack.push(snapshot(raw.el));
+        if (applyFileValue(raw.el as HTMLInputElement, dataUrl, mimeType, fileName)) filled++;
+      }
+      continue;
+    }
+
+    // ─ Standard text / select / textarea branch ───────────────────────────
+    const baseValue = item.overrideValue ?? resolveValue(profile, type);
     if (!baseValue) continue;
     let value = normalizeForType(type, baseValue);
     if (onWeezevent && detected) {
@@ -215,9 +242,58 @@ function handleUndo(): ContentResponse {
   return { ok: true, undone: count > 0 };
 }
 
+// ─── FR-28 : Floating icon ──────────────────────────────────────────────────
+
+function hasInteractiveFormFields(): boolean {
+  return document.querySelectorAll('input:not([type=hidden]), select, textarea').length > 0;
+}
+
+function mountFloatingButton(): void {
+  if (floatingBtn || !hasInteractiveFormFields()) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'formpilot-float-btn';
+  btn.setAttribute('aria-label', 'FormPilot — remplir ce formulaire');
+  btn.title = 'Ouvrir FormPilot';
+  btn.style.cssText = [
+    'position:fixed', 'bottom:20px', 'right:20px', 'z-index:2147483647',
+    'width:44px', 'height:44px', 'border-radius:50%', 'border:none',
+    'background:linear-gradient(135deg,#6366f1,#8b5cf6)',
+    'color:#fff', 'font-size:22px', 'cursor:pointer',
+    'box-shadow:0 4px 14px rgba(99,102,241,.55)',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'transition:transform .15s,box-shadow .15s',
+  ].join(';');
+  btn.textContent = '✈️';
+  btn.addEventListener('mouseenter', () => {
+    btn.style.transform = 'scale(1.1)';
+    btn.style.boxShadow = '0 6px 20px rgba(99,102,241,.75)';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = 'scale(1)';
+    btn.style.boxShadow = '0 4px 14px rgba(99,102,241,.55)';
+  });
+  btn.addEventListener('click', () => {
+    try {
+      // @ts-expect-error — sidePanel API MV3
+      chrome.sidePanel.open({ tabId: undefined });
+    } catch {
+      browser.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
+    }
+  });
+
+  document.body.appendChild(btn);
+  floatingBtn = btn;
+}
+
+function scheduleFloatingButton(): void {
+  if (floatDebounceTimer) clearTimeout(floatDebounceTimer);
+  floatDebounceTimer = setTimeout(mountFloatingButton, FLOAT_DELAY_MS);
+}
+
 export default defineContentScript({
   matches: ['<all_urls>'],
-  allFrames: true,
+  allFrames: false,
   runAt: 'document_idle',
   async main(ctx) {
     browser.runtime.onMessage.addListener(
@@ -247,14 +323,18 @@ export default defineContentScript({
     );
 
     stepObserver = startStepObserver();
+    scheduleFloatingButton();
 
     ctx.onInvalidated(() => {
       undoStack = [];
       lastDetection = [];
       lastLearnedMappings = [];
       if (stepDebounceTimer) clearTimeout(stepDebounceTimer);
+      if (floatDebounceTimer) clearTimeout(floatDebounceTimer);
       stepObserver?.disconnect();
       stepObserver = null;
+      floatingBtn?.remove();
+      floatingBtn = null;
     });
   },
 });

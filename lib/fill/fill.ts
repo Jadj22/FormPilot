@@ -184,3 +184,39 @@ export function restore(entry: UndoEntry): void {
     setNativeValue(el, entry.prevValue);
   }
 }
+
+/**
+ * FR-21 — inject a file into an input[type=file] via DataTransfer.
+ * @param el       The file input element.
+ * @param dataUrl  A base64 data: URL (e.g. "data:image/jpeg;base64,/9j/...").
+ * @param mimeType MIME type of the file (e.g. "image/jpeg").
+ * @param fileName Original filename (e.g. "passport.jpg").
+ * @returns true if the file was successfully injected.
+ */
+export function applyFileValue(
+  el: HTMLInputElement,
+  dataUrl: string,
+  mimeType: string,
+  fileName: string,
+): boolean {
+  if (el.type !== 'file') return false;
+  try {
+    const [, base64] = dataUrl.split(',');
+    if (!base64) return false;
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mimeType });
+    const file = new File([blob], fileName, { type: mimeType });
+
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    el.files = dt.files;
+
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  } catch {
+    return false;
+  }
+}
