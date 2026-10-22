@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import {
+  addLearnedMappings,
   createVault,
   isUnlocked,
   isVaultInitialized,
@@ -8,7 +9,23 @@ import {
 } from '~/lib/vault';
 import { resolveValue } from '~/lib/fill/fill';
 import { formatDateFrench } from '~/lib/normalize';
-import type { DetectedField, FillItem, Profile, VaultData } from '~/lib/types';
+import type {
+  DetectedField,
+  FillItem,
+  LearnedMapping,
+  Profile,
+  SemanticType,
+  VaultData,
+} from '~/lib/types';
+import { uid } from '~/lib/types';
+
+// ─── Local types ─────────────────────────────────────────────────────────────
+
+/** Transient per-field override set by the user in the detected view. */
+interface FieldOverride {
+  type: SemanticType | null;
+  memorize: boolean;
+}
 
 type ViewState =
   | { kind: 'loading' }
@@ -16,9 +33,18 @@ type ViewState =
   | { kind: 'recovery'; recoveryKey: string }
   | { kind: 'locked' }
   | { kind: 'ready'; profiles: Profile[] }
-  | { kind: 'detected'; profiles: Profile[]; fields: DetectedField[]; profileId: string; warnings: string[] }
+  | {
+      kind: 'detected';
+      profiles: Profile[];
+      fields: DetectedField[];
+      profileId: string;
+      warnings: string[];
+      hostname: string;
+    }
   | { kind: 'filled'; profiles: Profile[]; count: number; profileId: string }
   | { kind: 'error'; message: string };
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
   firstName: 'Prénom',
@@ -43,16 +69,22 @@ const TYPE_LABELS: Record<string, string> = {
   iban: 'IBAN',
   jobTitle: 'Poste',
   passportNumber: 'N° passeport',
-  idCardNumber: 'N° pièce d’identité',
-  idIssueDate: 'Date d’émission',
-  idExpiryDate: 'Date d’expiration',
+  idCardNumber: "N° pièce d'identité",
+  idIssueDate: "Date d'émission",
+  idExpiryDate: "Date d'expiration",
   birthCountry: 'Pays de naissance',
   birthCity: 'Ville de naissance',
   languages: 'Langue(s) usuelle(s)',
   residence: 'Résidence',
 };
 
-// Place le profil par défaut en premier : profiles[0] est celui utilisé partout dans le popup.
+const SEMANTIC_TYPE_OPTIONS = Object.entries(TYPE_LABELS).map(([value, label]) => ({
+  value: value as SemanticType,
+  label,
+}));
+
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
+
 function defaultFirst(vault: VaultData): Profile[] {
   const id = vault.defaultProfileId;
   if (!id) return vault.profiles;
@@ -71,11 +103,53 @@ async function sendToActiveTab<T>(message: unknown): Promise<T> {
   return browser.tabs.sendMessage(tab.id, message);
 }
 
+function hostnameFromTab(url: string | undefined): string {
+  try {
+    return new URL(url ?? '').hostname;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Compute a stable field signature matching the format used in content.ts
+ * (getFieldSignature), so saved mappings are resolved correctly on next detect.
+ */
+function fieldSignatureFrom(f: DetectedField): string {
+  if (f.name) return `name:${f.name.toLowerCase().trim()}`;
+  if (f.id) return `id:${f.id.toLowerCase().trim()}`;
+  return `label:${f.label.toLowerCase().trim()}`;
+}
+
+function proposedValue(
+  profile: Profile | undefined,
+  effectiveType: SemanticType | null,
+  currentValue: string,
+): string {
+  if (!profile) return currentValue || '—';
+  const val = resolveValue(profile, effectiveType);
+  if (!val) return currentValue || '—';
+  if (
+    effectiveType === 'birthDate' ||
+    effectiveType === 'idIssueDate' ||
+    effectiveType === 'idExpiryDate'
+  ) {
+    return formatDateFrench(val);
+  }
+  return val;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [error, setError] = useState('');
+  /** Transient per-field overrides set by the user during the detected view. */
+  const [overrides, setOverrides] = useState<Record<string, FieldOverride>>({});
+
+  // ── Init ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     (async () => {
@@ -95,6 +169,8 @@ export default function App() {
       setView({ kind: 'locked' });
     })();
   }, []);
+
+  // ── Auth handlers ──────────────────────────────────────────────────────────
 
   const handleSetup = useCallback(async () => {
     setError('');
@@ -124,30 +200,40 @@ export default function App() {
     setPassword('');
   }, [password]);
 
+  // ── Detect ─────────────────────────────────────────────────────────────────
+
   const handleDetect = useCallback(async () => {
     setError('');
+    setOverrides({});
     try {
+      // Load learned mappings from vault so content script can apply them
+      const vault = await loadVault();
+      const learnedMappings = vault.learnedMappings ?? [];
+
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      const hostname = hostnameFromTab(tab?.url);
+
       const resp = await sendToActiveTab<{
         ok: boolean;
         detected?: DetectedField[];
         warnings?: string[];
         error?: string;
-      }>({
-        type: 'DETECT',
-      });
+      }>({ type: 'DETECT', learnedMappings });
+
       if (!resp.ok || !resp.detected) {
         setError(resp.error ?? 'Détection impossible sur cette page.');
         return;
       }
+
       setView((v) => {
         if (v.kind !== 'ready') return v;
-        const defaultId = v.profiles[0]?.id ?? '';
         return {
           kind: 'detected',
           profiles: v.profiles,
           fields: resp.detected!,
           warnings: resp.warnings ?? [],
-          profileId: defaultId,
+          profileId: v.profiles[0]?.id ?? '',
+          hostname,
         };
       });
     } catch (e) {
@@ -156,19 +242,51 @@ export default function App() {
     }
   }, []);
 
+  // ── Fill ───────────────────────────────────────────────────────────────────
+
   const handleFill = useCallback(
     async (fields: DetectedField[], profileId: string) => {
-      const profile = view.kind === 'detected'
-        ? view.profiles.find((p) => p.id === profileId)
-        : undefined;
+      if (view.kind !== 'detected') return;
+      const profile = view.profiles.find((p) => p.id === profileId);
       if (!profile) {
         setError('Profil introuvable.');
         return;
       }
-      const items: FillItem[] = fields.map((f) => ({
-        key: f.key,
-        selected: f.selected,
-      }));
+      const { hostname } = view;
+
+      // Build fill items and collect mappings to persist
+      const toSave: LearnedMapping[] = [];
+      const items: FillItem[] = fields.map((f) => {
+        const override = overrides[f.key];
+        const hasTypeOverride = override !== undefined;
+        const effectiveType = hasTypeOverride ? override.type : f.type;
+
+        if (override?.memorize && hasTypeOverride && effectiveType !== null && hostname) {
+          toSave.push({
+            id: uid(),
+            hostname,
+            fieldSignature: fieldSignatureFrom(f),
+            type: effectiveType,
+            createdAt: Date.now(),
+          });
+        }
+
+        return {
+          key: f.key,
+          selected: f.selected,
+          overrideType: hasTypeOverride ? effectiveType : undefined,
+        };
+      });
+
+      // Persist corrections before filling (non-blocking on failure)
+      if (toSave.length > 0) {
+        try {
+          await addLearnedMappings(toSave);
+        } catch (e) {
+          console.warn('FormPilot: failed to save learned mappings', e);
+        }
+      }
+
       try {
         const resp = await sendToActiveTab<{ ok: boolean; filled?: number; error?: string }>({
           type: 'FILL',
@@ -188,8 +306,10 @@ export default function App() {
         console.error(e);
       }
     },
-    [view],
+    [view, overrides],
   );
+
+  // ── Undo ───────────────────────────────────────────────────────────────────
 
   const handleUndo = useCallback(async () => {
     try {
@@ -203,14 +323,14 @@ export default function App() {
     }
   }, []);
 
+  // ── Field selection helpers ────────────────────────────────────────────────
+
   const toggleField = (key: string) => {
     setView((v) => {
       if (v.kind !== 'detected') return v;
       return {
         ...v,
-        fields: v.fields.map((f) =>
-          f.key === key ? { ...f, selected: !f.selected } : f,
-        ),
+        fields: v.fields.map((f) => (f.key === key ? { ...f, selected: !f.selected } : f)),
       };
     });
   };
@@ -218,22 +338,27 @@ export default function App() {
   const setAllFields = (selected: boolean) => {
     setView((v) => {
       if (v.kind !== 'detected') return v;
-      return {
-        ...v,
-        fields: v.fields.map((f) => ({ ...f, selected })),
-      };
+      return { ...v, fields: v.fields.map((f) => ({ ...f, selected })) };
     });
   };
 
-  const proposedValue = (profile: Profile | undefined, f: DetectedField) => {
-    if (!profile) return f.value || '—';
-    const val = resolveValue(profile, f.type);
-    if (!val) return f.value || '—';
-    if (f.type === 'birthDate' || f.type === 'idIssueDate' || f.type === 'idExpiryDate') {
-      return formatDateFrench(val);
-    }
-    return val;
+  // ── Override helpers ───────────────────────────────────────────────────────
+
+  const setFieldOverrideType = (key: string, type: SemanticType | null) => {
+    setOverrides((prev) => ({
+      ...prev,
+      [key]: { type, memorize: true },
+    }));
   };
+
+  const toggleFieldMemorize = (key: string, effectiveType: SemanticType | null) => {
+    setOverrides((prev) => ({
+      ...prev,
+      [key]: { type: effectiveType, memorize: !(prev[key]?.memorize ?? false) },
+    }));
+  };
+
+  // ─── Views ────────────────────────────────────────────────────────────────
 
   if (view.kind === 'loading') {
     return <div className="p-4 text-sm text-neutral-400">Chargement…</div>;
@@ -283,10 +408,10 @@ export default function App() {
       <div className="w-80 space-y-3 p-4">
         <h1 className="text-base font-semibold">Clé de récupération</h1>
         <p className="text-xs text-amber-400">
-          Notez cette clé et conservez-la en lieu sûr. Sans mot de passe ni clé, vos
-          données sont irrécupérables. Elle n&apos;est plus affichée ensuite.
+          Notez cette clé et conservez-la en lieu sûr. Sans mot de passe ni clé, vos données sont
+          irrécupérables. Elle n&apos;est plus affichée ensuite.
         </p>
-        <code className="block break-all rounded border border-neutral-700 bg-neutral-900 p-2 text-xs text-emerald-400 select-all">
+        <code className="block select-all break-all rounded border border-neutral-700 bg-neutral-900 p-2 text-xs text-emerald-400">
           {view.recoveryKey}
         </code>
         <button
@@ -370,19 +495,19 @@ export default function App() {
   if (view.kind === 'detected') {
     const selectedCount = view.fields.filter((f) => f.selected).length;
     const profile = view.profiles.find((p) => p.id === view.profileId);
+
     return (
       <div className="w-80 space-y-2 p-4">
         <h1 className="text-base font-semibold">
           Aperçu ({selectedCount}/{view.fields.length})
         </h1>
+
         {view.profiles.length > 1 && (
           <select
             className="w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs"
             value={view.profileId}
             onChange={(e) =>
-              setView((v) =>
-                v.kind === 'detected' ? { ...v, profileId: e.target.value } : v,
-              )
+              setView((v) => (v.kind === 'detected' ? { ...v, profileId: e.target.value } : v))
             }
           >
             {view.profiles.map((p) => (
@@ -392,6 +517,7 @@ export default function App() {
             ))}
           </select>
         )}
+
         {view.warnings.length > 0 && (
           <div className="space-y-1 rounded border border-amber-700 bg-amber-950/50 p-2">
             {view.warnings.map((w) => (
@@ -401,54 +527,104 @@ export default function App() {
             ))}
           </div>
         )}
+
         <div className="flex gap-2 text-[11px]">
-          <button
-            type="button"
-            onClick={() => setAllFields(true)}
-            className="text-sky-400 hover:underline"
-          >
+          <button type="button" onClick={() => setAllFields(true)} className="text-sky-400 hover:underline">
             Tout cocher
           </button>
-          <button
-            type="button"
-            onClick={() => setAllFields(false)}
-            className="text-neutral-400 hover:underline"
-          >
+          <button type="button" onClick={() => setAllFields(false)} className="text-neutral-400 hover:underline">
             Tout décocher
           </button>
         </div>
 
-        <div className="max-h-64 space-y-1 overflow-y-auto">
+        <div className="max-h-72 space-y-1.5 overflow-y-auto">
           {view.fields.length === 0 ? (
             <p className="text-xs text-amber-400">Aucun champ détecté sur cette page.</p>
           ) : (
-            view.fields.map((f) => (
-              <label
-                key={f.key}
-                className="flex cursor-pointer items-start gap-2 rounded border border-neutral-800 bg-neutral-900 px-2 py-2 hover:border-neutral-600"
-              >
-                <input
-                  type="checkbox"
-                  checked={f.selected}
-                  onChange={() => toggleField(f.key)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-sky-600"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs text-neutral-200">{f.label}</div>
-                  <div className="truncate text-[11px] text-sky-300/90">
-                    → {proposedValue(profile, f)}
+            view.fields.map((f) => {
+              const override = overrides[f.key];
+              const effectiveType: SemanticType | null =
+                override !== undefined ? override.type : f.type;
+              const hasOverride = override !== undefined && override.type !== f.type;
+
+              return (
+                <div
+                  key={f.key}
+                  className="space-y-1.5 rounded border border-neutral-800 bg-neutral-900 px-2 py-2"
+                >
+                  {/* Row 1 : checkbox + label + value preview */}
+                  <label className="flex cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={f.selected}
+                      onChange={() => toggleField(f.key)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-sky-600"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1 text-xs text-neutral-200">
+                        <span className="truncate">{f.label}</span>
+                        {f.isLearned && (
+                          <span title="Règle mémorisée pour ce site" className="shrink-0 text-[10px]">
+                            🧠
+                          </span>
+                        )}
+                      </div>
+                      <div className="truncate text-[11px] text-sky-300/90">
+                        → {proposedValue(profile, effectiveType, f.value)}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Row 2 : type dropdown + memorize checkbox */}
+                  <div className="flex items-center gap-2 pl-6">
+                    <select
+                      className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-1.5 py-0.5 text-[11px] text-neutral-300"
+                      value={effectiveType ?? '__none__'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFieldOverrideType(
+                          f.key,
+                          val === '__none__' ? null : (val as SemanticType),
+                        );
+                      }}
+                    >
+                      <option value="__none__">— non reconnu —</option>
+                      {SEMANTIC_TYPE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex shrink-0 cursor-pointer items-center gap-1 text-[10px] text-neutral-400">
+                      <input
+                        type="checkbox"
+                        className="accent-sky-600"
+                        checked={override?.memorize ?? false}
+                        onChange={() => toggleFieldMemorize(f.key, effectiveType)}
+                      />
+                      Mémoriser
+                    </label>
                   </div>
-                  <div className="text-[10px] text-neutral-500">
-                    {f.type ? TYPE_LABELS[f.type] ?? f.type : 'non reconnu'} ·{' '}
-                    <span className={confidenceColor(f.confidence)}>{f.confidence}%</span>
+
+                  {/* Row 3 : confidence + override notice */}
+                  <div className="flex items-center gap-2 pl-6">
+                    <span className={`text-[10px] ${confidenceColor(f.confidence)}`}>
+                      {f.confidence}%
+                    </span>
+                    {hasOverride && (
+                      <span className="text-[10px] text-amber-400">
+                        ✎ {TYPE_LABELS[effectiveType ?? ''] ?? '—'}
+                      </span>
+                    )}
                   </div>
                 </div>
-              </label>
-            ))
+              );
+            })
           )}
         </div>
 
         {error && <p className="text-xs text-red-400">{error}</p>}
+
         <div className="flex gap-2">
           <button
             type="button"
@@ -479,6 +655,7 @@ export default function App() {
     );
   }
 
+  // kind === 'filled'
   return (
     <div className="w-80 space-y-3 p-4">
       <h1 className="text-base font-semibold">

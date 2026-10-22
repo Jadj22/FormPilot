@@ -131,6 +131,14 @@ export function classifyField(el: HTMLElement, label: string): ScoredClassificat
   return { type: best, confidence: bestScore };
 }
 
+export function getFieldSignature(el: HTMLElement, label: string): string {
+  const name = el.getAttribute('name');
+  if (name) return `name:${name.toLowerCase().trim()}`;
+  const id = el.getAttribute('id');
+  if (id) return `id:${id.toLowerCase().trim()}`;
+  return `label:${label.toLowerCase().trim()}`;
+}
+
 export function detectFields(root: ParentNode = document): DetectedField[] {
   return collectFields(root).map(({ el, key }) => {
     const label = labelTextFor(el);
@@ -139,9 +147,14 @@ export function detectFields(root: ParentNode = document): DetectedField[] {
       el instanceof HTMLSelectElement
         ? (el.selectedOptions[0]?.textContent?.trim() ?? '')
         : ((el as HTMLInputElement).value ?? '');
+    const name = el.getAttribute('name') ?? undefined;
+    const id = el.getAttribute('id') ?? undefined;
+
     return {
       key,
       label: label || '(sans libellé)',
+      name,
+      id,
       type,
       confidence,
       value: current,

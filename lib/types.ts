@@ -53,19 +53,37 @@ export interface Profile {
   fields: FieldValue[];
 }
 
+export interface LearnedMapping {
+  id: string;
+  hostname: string;
+  fieldSignature: string; // ex: name, id, or normalized label
+  type: SemanticType;
+  createdAt: number;
+}
+
+export interface SiteRule {
+  hostname: string;
+  defaultProfileId?: string | null;
+}
+
 export interface VaultData {
   version: 1;
   profiles: Profile[];
   defaultProfileId: string | null;
+  learnedMappings?: LearnedMapping[];
+  siteRules?: SiteRule[];
 }
 
 export interface DetectedField {
   key: string;
   label: string;
+  name?: string;
+  id?: string;
   type: SemanticType | null;
   confidence: number;
   value: string;
   selected: boolean;
+  isLearned?: boolean;
 }
 
 export interface FillItem {
@@ -73,10 +91,11 @@ export interface FillItem {
   selected: boolean;
   overrideValue?: string;
   overrideType?: SemanticType | null;
+  saveRuleForHost?: string;
 }
 
 export type ContentRequest =
-  | { type: 'DETECT' }
+  | { type: 'DETECT'; learnedMappings?: LearnedMapping[] }
   | { type: 'FILL'; items: FillItem[]; profile: Profile }
   | { type: 'UNDO' }
   | { type: 'STATUS' };
@@ -89,7 +108,13 @@ export type ContentResponse =
   | { ok: false; error: string };
 
 export function emptyVault(): VaultData {
-  return { version: 1, profiles: [], defaultProfileId: null };
+  return {
+    version: 1,
+    profiles: [],
+    defaultProfileId: null,
+    learnedMappings: [],
+    siteRules: [],
+  };
 }
 
 export function uid(): string {

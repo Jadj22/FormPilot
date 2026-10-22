@@ -7,7 +7,7 @@ import {
   toBase64,
   fromBase64,
 } from './crypto';
-import { emptyVault, type VaultData } from './types';
+import { emptyVault, type LearnedMapping, type VaultData } from './types';
 
 interface WrappedKey {
   iv: string;
@@ -171,6 +171,33 @@ export async function saveVault(data: VaultData): Promise<void> {
   const { iv, data: encrypted } = await encryptJSON(sessionKey, data);
   await db.vault.put({ ...row, iv, data: encrypted });
   scheduleAutoLock();
+}
+
+/**
+ * Upsert a batch of learned mappings into the vault.
+ * If a mapping with the same (hostname, fieldSignature) already exists it is replaced.
+ */
+export async function addLearnedMappings(newMappings: LearnedMapping[]): Promise<void> {
+  if (newMappings.length === 0) return;
+  const vault = await loadVault();
+  const existing = vault.learnedMappings ?? [];
+  const merged = [...existing];
+  for (const m of newMappings) {
+    const idx = merged.findIndex(
+      (e) => e.hostname === m.hostname && e.fieldSignature === m.fieldSignature,
+    );
+    if (idx >= 0) merged[idx] = m;
+    else merged.push(m);
+  }
+  vault.learnedMappings = merged;
+  await saveVault(vault);
+}
+
+/** Remove a single learned mapping by its id. */
+export async function removeLearnedMapping(id: string): Promise<void> {
+  const vault = await loadVault();
+  vault.learnedMappings = (vault.learnedMappings ?? []).filter((m) => m.id !== id);
+  await saveVault(vault);
 }
 
 export async function destroyVault(): Promise<void> {

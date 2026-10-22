@@ -16,6 +16,7 @@ import type {
   ContentResponse,
   DetectedField,
   FillItem,
+  LearnedMapping,
   Profile,
 } from '~/lib/types';
 import { resolveValue } from '~/lib/fill/fill';
@@ -23,12 +24,53 @@ import { resolveValue } from '~/lib/fill/fill';
 let lastDetection: DetectedField[] = [];
 let undoStack: UndoEntry[] = [];
 
+function applyLearnedMappings(
+  fields: DetectedField[],
+  hostname: string,
+  mappings: LearnedMapping[] = [],
+): DetectedField[] {
+  if (!mappings || mappings.length === 0) return fields;
+  const hostMappings = mappings.filter((m) =>
+    hostname === m.hostname || hostname.endsWith(`.${m.hostname}`),
+  );
+  if (hostMappings.length === 0) return fields;
+
+  return fields.map((f) => {
+    // 1. Chercher par name exact
+    let hit = f.name
+      ? hostMappings.find((m) => m.fieldSignature === `name:${f.name?.toLowerCase().trim()}`)
+      : undefined;
+
+    // 2. Chercher par id exact
+    if (!hit && f.id) {
+      hit = hostMappings.find((m) => m.fieldSignature === `id:${f.id?.toLowerCase().trim()}`);
+    }
+
+    // 3. Chercher par label
+    if (!hit && f.label) {
+      hit = hostMappings.find((m) => m.fieldSignature === `label:${f.label.toLowerCase().trim()}`);
+    }
+
+    if (hit) {
+      return {
+        ...f,
+        type: hit.type,
+        confidence: 100,
+        selected: true,
+        isLearned: true,
+      };
+    }
+    return f;
+  });
+}
+
 function reclassifyWithSiteRules(
   fields: DetectedField[],
   hostname: string,
 ): DetectedField[] {
   if (!isWeezeventHost(hostname)) return fields;
   return fields.map((f) => {
+    if (f.isLearned) return f;
     const hit = classifyWeezevent(f.label);
     if (hit) {
       return {
@@ -65,9 +107,10 @@ function collectWarnings(): string[] {
   return [...new Set(warnings)];
 }
 
-async function handleDetect(): Promise<ContentResponse> {
+async function handleDetect(learnedMappings?: LearnedMapping[]): Promise<ContentResponse> {
   refreshFieldCache();
   let fields = detectFields();
+  fields = applyLearnedMappings(fields, location.hostname, learnedMappings);
   fields = reclassifyWithSiteRules(fields, location.hostname);
   lastDetection = fields;
   return { ok: true, detected: fields, warnings: collectWarnings() };
@@ -117,7 +160,7 @@ export default defineContentScript({
         (async () => {
           try {
             if (message.type === 'DETECT') {
-              sendResponse(await handleDetect());
+              sendResponse(await handleDetect(message.learnedMappings));
             } else if (message.type === 'FILL') {
               sendResponse(await handleFill(message.items, message.profile));
             } else if (message.type === 'UNDO') {
