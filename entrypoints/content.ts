@@ -12,6 +12,7 @@ import {
 import { normalizeForType } from '~/lib/normalize';
 import { classifyWeezevent, isWeezeventHost } from '~/lib/weezevent/rules';
 import type {
+  ContentPushMessage,
   ContentRequest,
   ContentResponse,
   DetectedField,
@@ -23,6 +24,12 @@ import { resolveValue } from '~/lib/fill/fill';
 
 let lastDetection: DetectedField[] = [];
 let undoStack: UndoEntry[] = [];
+/** Cached from last DETECT call so the MutationObserver can re-detect autonomously. */
+let lastLearnedMappings: LearnedMapping[] = [];
+let stepObserver: MutationObserver | null = null;
+let stepDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const STEP_DEBOUNCE_MS = 400;
 
 function applyLearnedMappings(
   fields: DetectedField[],
@@ -107,10 +114,68 @@ function collectWarnings(): string[] {
   return [...new Set(warnings)];
 }
 
+// ─── Multi-step / MutationObserver helpers ───────────────────────────────────
+
+/** True only when a mutation record contains an added/removed form element. */
+function hasFormElementMutation(mutations: MutationRecord[]): boolean {
+  const formTags = new Set(['INPUT', 'SELECT', 'TEXTAREA', 'FORM', 'FIELDSET']);
+  for (const m of mutations) {
+    for (const node of [...m.addedNodes, ...m.removedNodes]) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue;
+      const el = node as Element;
+      if (formTags.has(el.tagName)) return true;
+      if (el.querySelector?.('input, select, textarea')) return true;
+    }
+  }
+  return false;
+}
+
+/** True when the set of field keys or their order has changed. */
+function fieldsSignatureChanged(next: DetectedField[], prev: DetectedField[]): boolean {
+  if (next.length !== prev.length) return true;
+  return next.some((f, i) => f.key !== prev[i]?.key);
+}
+
+/** Debounced handler called by the MutationObserver after a form-element mutation. */
+function onDomMutation(): void {
+  if (stepDebounceTimer) clearTimeout(stepDebounceTimer);
+  stepDebounceTimer = setTimeout(async () => {
+    refreshFieldCache();
+    let fields = detectFields();
+    fields = applyLearnedMappings(fields, location.hostname, lastLearnedMappings);
+    fields = reclassifyWithSiteRules(fields, location.hostname);
+
+    if (!fieldsSignatureChanged(fields, lastDetection)) return;
+
+    lastDetection = fields;
+    const msg: ContentPushMessage = {
+      type: 'STEP_CHANGED',
+      detected: fields,
+      warnings: collectWarnings(),
+    };
+    try {
+      await browser.runtime.sendMessage(msg);
+    } catch {
+      // Popup is closed — message is silently dropped, no action needed.
+    }
+  }, STEP_DEBOUNCE_MS);
+}
+
+function startStepObserver(): MutationObserver {
+  const obs = new MutationObserver((mutations) => {
+    if (hasFormElementMutation(mutations)) onDomMutation();
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
+  return obs;
+}
+
+// ─── Request handlers ─────────────────────────────────────────────────────────
+
 async function handleDetect(learnedMappings?: LearnedMapping[]): Promise<ContentResponse> {
+  lastLearnedMappings = learnedMappings ?? [];
   refreshFieldCache();
   let fields = detectFields();
-  fields = applyLearnedMappings(fields, location.hostname, learnedMappings);
+  fields = applyLearnedMappings(fields, location.hostname, lastLearnedMappings);
   fields = reclassifyWithSiteRules(fields, location.hostname);
   lastDetection = fields;
   return { ok: true, detected: fields, warnings: collectWarnings() };
@@ -181,9 +246,15 @@ export default defineContentScript({
       },
     );
 
+    stepObserver = startStepObserver();
+
     ctx.onInvalidated(() => {
       undoStack = [];
       lastDetection = [];
+      lastLearnedMappings = [];
+      if (stepDebounceTimer) clearTimeout(stepDebounceTimer);
+      stepObserver?.disconnect();
+      stepObserver = null;
     });
   },
 });

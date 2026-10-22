@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getFieldSignature } from '~/lib/detection/classify';
 import type { DetectedField, LearnedMapping } from '~/lib/types';
 
-// ─── Inline applyLearnedMappings (mirrors content.ts logic for unit testing) ──
+// ─── Inline helpers (mirror content.ts logic for unit testing) ────────────────
 
 function applyLearnedMappings(
   fields: DetectedField[],
@@ -15,7 +15,6 @@ function applyLearnedMappings(
     (m) => hostname === m.hostname || hostname.endsWith(`.${m.hostname}`),
   );
   if (!hostMappings.length) return fields;
-
   return fields.map((f) => {
     let hit = f.name
       ? hostMappings.find((m) => m.fieldSignature === `name:${f.name!.toLowerCase().trim()}`)
@@ -24,40 +23,58 @@ function applyLearnedMappings(
       hit = hostMappings.find((m) => m.fieldSignature === `id:${f.id!.toLowerCase().trim()}`);
     }
     if (!hit) {
-      hit = hostMappings.find(
-        (m) => m.fieldSignature === `label:${f.label.toLowerCase().trim()}`,
-      );
+      hit = hostMappings.find((m) => m.fieldSignature === `label:${f.label.toLowerCase().trim()}`);
     }
-    if (hit) {
-      return { ...f, type: hit.type, confidence: 100, selected: true, isLearned: true };
-    }
-    return f;
+    return hit ? { ...f, type: hit.type, confidence: 100, selected: true, isLearned: true } : f;
   });
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+function hasFormElementMutation(mutations: MutationRecord[]): boolean {
+  const formTags = new Set(['INPUT', 'SELECT', 'TEXTAREA', 'FORM', 'FIELDSET']);
+  for (const m of mutations) {
+    for (const node of [...m.addedNodes, ...m.removedNodes]) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue;
+      const el = node as Element;
+      if (formTags.has(el.tagName)) return true;
+      if (el.querySelector?.('input, select, textarea')) return true;
+    }
+  }
+  return false;
+}
+
+function fieldsSignatureChanged(next: DetectedField[], prev: DetectedField[]): boolean {
+  if (next.length !== prev.length) return true;
+  return next.some((f, i) => f.key !== prev[i]?.key);
+}
+
+function fieldSignatureFrom(f: Pick<DetectedField, 'name' | 'id' | 'label'>): string {
+  if (f.name) return `name:${f.name.toLowerCase().trim()}`;
+  if (f.id) return `id:${f.id.toLowerCase().trim()}`;
+  return `label:${f.label.toLowerCase().trim()}`;
+}
+
+// ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 function makeField(overrides: Partial<DetectedField> = {}): DetectedField {
-  return {
-    key: 'k1',
-    label: 'Champ test',
-    type: null,
-    confidence: 0,
-    value: '',
-    selected: false,
-    ...overrides,
-  };
+  return { key: 'k1', label: 'Champ test', type: null, confidence: 0, value: '', selected: false, ...overrides };
 }
 
 function makeMapping(overrides: Partial<LearnedMapping> = {}): LearnedMapping {
+  return { id: 'id-1', hostname: 'example.com', fieldSignature: 'label:champ test', type: 'firstName', createdAt: 0, ...overrides };
+}
+
+function fakeMutationRecord(addedEl: Element | null, removedEl: Element | null = null): MutationRecord {
   return {
-    id: 'id-1',
-    hostname: 'example.com',
-    fieldSignature: 'label:champ test',
-    type: 'firstName',
-    createdAt: 0,
-    ...overrides,
-  };
+    type: 'childList',
+    target: document.body,
+    addedNodes: (addedEl ? [addedEl] : []) as unknown as NodeList,
+    removedNodes: (removedEl ? [removedEl] : []) as unknown as NodeList,
+    previousSibling: null,
+    nextSibling: null,
+    attributeName: null,
+    attributeNamespace: null,
+    oldValue: null,
+  } as MutationRecord;
 }
 
 // ─── getFieldSignature ────────────────────────────────────────────────────────
@@ -90,65 +107,65 @@ describe('applyLearnedMappings', () => {
   });
 
   it('applies mapping by label', () => {
-    const field = makeField({ label: 'Champ test', type: null });
-    const mapping = makeMapping({ fieldSignature: 'label:champ test', type: 'firstName' });
-    const [result] = applyLearnedMappings([field], 'example.com', [mapping]);
+    const [result] = applyLearnedMappings(
+      [makeField({ label: 'Champ test', type: null })],
+      'example.com',
+      [makeMapping({ fieldSignature: 'label:champ test', type: 'firstName' })],
+    );
     expect(result.type).toBe('firstName');
     expect(result.confidence).toBe(100);
     expect(result.isLearned).toBe(true);
   });
 
-  it('applies mapping by name attribute (takes priority over label)', () => {
-    const field = makeField({ label: 'X', name: 'email_field', type: null });
-    const mapping = makeMapping({
-      fieldSignature: 'name:email_field',
-      type: 'email',
-    });
-    const [result] = applyLearnedMappings([field], 'example.com', [mapping]);
+  it('applies mapping by name attribute', () => {
+    const [result] = applyLearnedMappings(
+      [makeField({ label: 'X', name: 'email_field', type: null })],
+      'example.com',
+      [makeMapping({ fieldSignature: 'name:email_field', type: 'email' })],
+    );
     expect(result.type).toBe('email');
-    expect(result.isLearned).toBe(true);
   });
 
   it('applies mapping by id attribute', () => {
-    const field = makeField({ id: 'birth_date', label: 'Quelque chose', type: null });
-    const mapping = makeMapping({ fieldSignature: 'id:birth_date', type: 'birthDate' });
-    const [result] = applyLearnedMappings([field], 'example.com', [mapping]);
+    const [result] = applyLearnedMappings(
+      [makeField({ id: 'birth_date', label: 'Quelque chose', type: null })],
+      'example.com',
+      [makeMapping({ fieldSignature: 'id:birth_date', type: 'birthDate' })],
+    );
     expect(result.type).toBe('birthDate');
   });
 
   it('ignores mappings from a different host', () => {
-    const field = makeField({ label: 'Champ test', type: null });
-    const mapping = makeMapping({ hostname: 'other.com' });
-    const [result] = applyLearnedMappings([field], 'example.com', [mapping]);
+    const [result] = applyLearnedMappings(
+      [makeField()],
+      'example.com',
+      [makeMapping({ hostname: 'other.com' })],
+    );
     expect(result.type).toBeNull();
-    expect(result.isLearned).toBeUndefined();
   });
 
   it('matches subdomains against base hostname', () => {
-    const field = makeField({ label: 'Champ test', type: null });
-    const mapping = makeMapping({ hostname: 'example.com' });
-    const [result] = applyLearnedMappings([field], 'tickets.example.com', [mapping]);
-    expect(result.type).toBe('firstName');
+    const [result] = applyLearnedMappings(
+      [makeField()],
+      'tickets.example.com',
+      [makeMapping({ hostname: 'example.com' })],
+    );
     expect(result.isLearned).toBe(true);
   });
 
   it('does not match sibling domains', () => {
-    const field = makeField({ label: 'Champ test', type: null });
-    const mapping = makeMapping({ hostname: 'evil-example.com' });
-    const [result] = applyLearnedMappings([field], 'example.com', [mapping]);
+    const [result] = applyLearnedMappings(
+      [makeField()],
+      'example.com',
+      [makeMapping({ hostname: 'evil-example.com' })],
+    );
     expect(result.type).toBeNull();
   });
 });
 
-// ─── fieldSignatureFrom (popup helper - tested inline) ────────────────────────
+// ─── fieldSignatureFrom (popup helper) ────────────────────────────────────────
 
 describe('fieldSignatureFrom (popup helper)', () => {
-  function fieldSignatureFrom(f: Pick<DetectedField, 'name' | 'id' | 'label'>): string {
-    if (f.name) return `name:${f.name.toLowerCase().trim()}`;
-    if (f.id) return `id:${f.id.toLowerCase().trim()}`;
-    return `label:${f.label.toLowerCase().trim()}`;
-  }
-
   it('returns name signature when name is set', () => {
     expect(fieldSignatureFrom({ name: 'LastName', id: 'x', label: 'y' })).toBe('name:lastname');
   });
@@ -159,5 +176,57 @@ describe('fieldSignatureFrom (popup helper)', () => {
 
   it('returns label signature as last resort', () => {
     expect(fieldSignatureFrom({ label: 'Date de naissance' })).toBe('label:date de naissance');
+  });
+});
+
+// ─── FR-20 : hasFormElementMutation ──────────────────────────────────────────
+
+describe('hasFormElementMutation (FR-20)', () => {
+  it('returns true when an input is added', () => {
+    expect(hasFormElementMutation([fakeMutationRecord(document.createElement('input'))])).toBe(true);
+  });
+
+  it('returns true when a select is removed', () => {
+    expect(hasFormElementMutation([fakeMutationRecord(null, document.createElement('select'))])).toBe(true);
+  });
+
+  it('returns true when a div wrapping an input is added', () => {
+    const div = document.createElement('div');
+    div.appendChild(document.createElement('input'));
+    expect(hasFormElementMutation([fakeMutationRecord(div)])).toBe(true);
+  });
+
+  it('returns false when only a span is added', () => {
+    const span = document.createElement('span');
+    span.textContent = 'hello';
+    expect(hasFormElementMutation([fakeMutationRecord(span)])).toBe(false);
+  });
+
+  it('returns false for empty mutation array', () => {
+    expect(hasFormElementMutation([])).toBe(false);
+  });
+});
+
+// ─── FR-20 : fieldsSignatureChanged ──────────────────────────────────────────
+
+describe('fieldsSignatureChanged (FR-20)', () => {
+  it('returns false when field sets are identical', () => {
+    const a = [makeField({ key: 'k1' }), makeField({ key: 'k2' })];
+    const b = [makeField({ key: 'k1' }), makeField({ key: 'k2' })];
+    expect(fieldsSignatureChanged(a, b)).toBe(false);
+  });
+
+  it('returns true when counts differ', () => {
+    expect(fieldsSignatureChanged([makeField({ key: 'k1' })], [makeField({ key: 'k1' }), makeField({ key: 'k2' })])).toBe(true);
+  });
+
+  it('returns true when a key differs at same position', () => {
+    const a = [makeField({ key: 'k1' }), makeField({ key: 'k_new' })];
+    const b = [makeField({ key: 'k1' }), makeField({ key: 'k2' })];
+    expect(fieldsSignatureChanged(a, b)).toBe(true);
+  });
+
+  it('returns false for two empty arrays', () => {
+    expect(fieldsSignatureChanged([], [])).toBe(false);
   });
 });

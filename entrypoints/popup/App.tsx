@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   addLearnedMappings,
   createVault,
@@ -10,6 +10,7 @@ import {
 import { resolveValue } from '~/lib/fill/fill';
 import { formatDateFrench } from '~/lib/normalize';
 import type {
+  ContentPushMessage,
   DetectedField,
   FillItem,
   LearnedMapping,
@@ -148,6 +149,8 @@ export default function App() {
   const [error, setError] = useState('');
   /** Transient per-field overrides set by the user during the detected view. */
   const [overrides, setOverrides] = useState<Record<string, FieldOverride>>({});
+  /** Non-null when the MutationObserver detected a step change while popup is open. */
+  const [pendingStep, setPendingStep] = useState<{ detected: DetectedField[]; warnings: string[] } | null>(null);
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -168,6 +171,22 @@ export default function App() {
       }
       setView({ kind: 'locked' });
     })();
+  }, []);
+
+  // ── Step-change listener (FR-20) ──────────────────────────────────────────
+
+  useEffect(() => {
+    const onMessage = (msg: ContentPushMessage) => {
+      if (msg.type !== 'STEP_CHANGED') return;
+      setPendingStep({ detected: msg.detected, warnings: msg.warnings });
+    };
+    browser.runtime.onMessage.addListener(
+      onMessage as Parameters<typeof browser.runtime.onMessage.addListener>[0],
+    );
+    return () =>
+      browser.runtime.onMessage.removeListener(
+        onMessage as Parameters<typeof browser.runtime.onMessage.removeListener>[0],
+      );
   }, []);
 
   // ── Auth handlers ──────────────────────────────────────────────────────────
@@ -496,11 +515,54 @@ export default function App() {
     const selectedCount = view.fields.filter((f) => f.selected).length;
     const profile = view.profiles.find((p) => p.id === view.profileId);
 
+    /** Apply the pending step: swap fields, keep overrides for matching keys, clear pending. */
+    const applyStepChange = () => {
+      if (!pendingStep) return;
+      setView((v) => {
+        if (v.kind !== 'detected') return v;
+        return { ...v, fields: pendingStep.detected, warnings: pendingStep.warnings };
+      });
+      // Drop overrides for keys that no longer exist in the new step
+      setOverrides((prev) => {
+        const nextKeys = new Set(pendingStep.detected.map((f) => f.key));
+        return Object.fromEntries(Object.entries(prev).filter(([k]) => nextKeys.has(k)));
+      });
+      setPendingStep(null);
+    };
+
     return (
       <div className="w-80 space-y-2 p-4">
         <h1 className="text-base font-semibold">
           Aperçu ({selectedCount}/{view.fields.length})
         </h1>
+
+        {/* Step-change banner */}
+        {pendingStep && (
+          <div className="flex items-center justify-between gap-2 rounded border border-sky-700 bg-sky-950/60 px-2 py-1.5">
+            <p className="text-[11px] text-sky-300">
+              🔄 Nouvelle étape ({pendingStep.detected.length} champ
+              {pendingStep.detected.length > 1 ? 's' : ''} détecté
+              {pendingStep.detected.length > 1 ? 's' : ''})
+            </p>
+            <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                onClick={applyStepChange}
+                className="rounded bg-sky-600 px-2 py-0.5 text-[11px] font-medium hover:bg-sky-500"
+              >
+                Rafraîchir
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingStep(null)}
+                className="text-[11px] text-neutral-500 hover:text-neutral-300"
+                title="Ignorer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {view.profiles.length > 1 && (
           <select

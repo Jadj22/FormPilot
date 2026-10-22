@@ -100,6 +100,13 @@ export type ContentRequest =
   | { type: 'UNDO' }
   | { type: 'STATUS' };
 
+/** Push message sent by content.ts → popup when a multi-step form changes step. */
+export type ContentPushMessage = {
+  type: 'STEP_CHANGED';
+  detected: DetectedField[];
+  warnings: string[];
+};
+
 export type ContentResponse =
   | { ok: true; status: { fields: number; filled: number } }
   | { ok: true; detected: DetectedField[]; warnings: string[] }
