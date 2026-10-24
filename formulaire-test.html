@@ -1,353 +1,241 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FormPilot — Formulaire de test (tous les champs)</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f4f6f8;
-        --card: #fff;
-        --border: #d8dee6;
-        --text: #1a1f26;
-        --muted: #5c6b7a;
-        --accent: #0284c7;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.45;
-      }
-      header {
-        background: #0f172a;
-        color: #f8fafc;
-        padding: 1.25rem 1.5rem;
-      }
-      header h1 {
-        margin: 0;
-        font-size: 1.25rem;
-      }
-      header p {
-        margin: 0.35rem 0 0;
-        font-size: 0.875rem;
-        opacity: 0.85;
-      }
-      main {
-        max-width: 720px;
-        margin: 0 auto;
-        padding: 1.5rem;
-      }
-      section {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1.25rem 1.35rem 1.5rem;
-        margin-bottom: 1.25rem;
-      }
-      section h2 {
-        margin: 0 0 1rem;
-        font-size: 1rem;
-        color: var(--accent);
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.85rem 1rem;
-      }
-      .full {
-        grid-column: 1 / -1;
-      }
-      label {
-        display: flex;
-        flex-direction: column;
-        gap: 0.3rem;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--muted);
-      }
-      input,
-      select {
-        font: inherit;
-        font-weight: 400;
-        color: var(--text);
-        padding: 0.5rem 0.65rem;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: #fff;
-      }
-      input:focus,
-      select:focus {
-        outline: 2px solid #7dd3fc;
-        border-color: var(--accent);
-      }
-      .actions {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        margin-top: 0.5rem;
-      }
-      button {
-        font: inherit;
-        cursor: pointer;
-        border-radius: 8px;
-        padding: 0.65rem 1.1rem;
-        border: 1px solid transparent;
-      }
-      button[type='submit'] {
-        background: var(--accent);
-        color: #fff;
-      }
-      button[type='reset'] {
-        background: #fff;
-        border-color: var(--border);
-      }
-      #result {
-        display: none;
-        margin-top: 1rem;
-        padding: 1rem;
-        background: #ecfdf5;
-        border: 1px solid #6ee7b7;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      #result.visible {
-        display: block;
-      }
-      .hint {
-        font-size: 0.8rem;
-        color: var(--muted);
-        margin: 0 0 1rem;
-      }
-      @media (max-width: 640px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <h1>Formulaire de test FormPilot</h1>
-      <p>
-        Tous les champs du profil · ouvrez ce fichier dans Chrome, puis utilisez
-        l’extension pour détecter et remplir.
-      </p>
-    </header>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inscription TCF Canada sur Ordinateur - Décembre 2026 (maquette de test FormPilot)</title>
+<style>
+:root{--blue:#0a35f5;--soft:#b9c7fb;--link:#1a47d6;--panel:#eff2f9;--line:#d5d9e4;--text:#1c1d22;--muted:#6b7080;--red:#d92d2d;--day:#4a63e8}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--text);background:#fff;font-size:14px;line-height:1.4}
+.page{max-width:884px;margin:0 auto;padding:0 64px 70px;border-left:1px solid #eef0f5;border-right:1px solid #eef0f5;min-height:100vh}
+.head{position:fixed;top:0;left:50%;width:min(756px,calc(100% - 24px));transform:translate(-50%,-130%);transition:transform .2s;z-index:5;background:#fff;border-radius:0 0 12px 12px;box-shadow:0 2px 8px rgba(20,30,60,.14);padding:20px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.head h1{margin:0;font-size:21px;font-weight:700}
+.btn{font:inherit;font-weight:700;text-transform:uppercase;font-size:13px;border:0;border-radius:4px;padding:12px 22px;cursor:pointer;background:var(--blue);color:#fff}
+.btn.alt{background:#f0f2f8;color:var(--text)}
+.btn:disabled{background:var(--soft);cursor:not-allowed}
+.head.show{transform:translate(-50%,0)}
+.test-banner{background:#fff4cc;border:1px solid #e6c84d;border-radius:4px;padding:8px 12px;margin:14px 0;font-size:12px}
+.hero h1{font-size:30px;line-height:1.2;margin:26px 0 12px}
+.hero p{margin:2px 0 8px;color:var(--muted)}
+.desc{margin:24px 0 10px;font-size:14px;line-height:1.55}
+.desc h3{font-size:16px;margin:0 0 10px}
+.desc p{margin:0 0 10px}
+.desc hr{border:0;border-top:1px dotted #aaa;margin:18px 0}
+#billetterie{scroll-margin-top:90px;margin-top:30px}
+.tabs{display:flex;margin:12px 0 20px}
+.tabs div{flex:1;text-align:center;padding:8px 0 6px;color:var(--muted);font-size:15px;border-bottom:2px solid transparent}
+.tabs small{display:block;font-size:14px}
+.tabs .on{color:var(--link);font-weight:600;border-bottom-color:var(--link)}
+.panel{background:var(--panel);border-radius:4px;padding:22px;margin-bottom:20px;font-size:13px}
+.panel.title{text-align:center;font-weight:700;font-size:16px}
+.panel.hd{font-weight:700;font-size:15px;margin:0;padding:16px}
+.cal-h{display:flex;justify-content:space-between;align-items:center;margin:22px 0 14px}
+.cal-h h3{margin:0;color:var(--link);font-size:22px}
+.nav{display:inline-block;background:#f0f2f8;border:1px solid var(--line);border-radius:4px;padding:8px 12px;color:#a3a8b8;font-size:13px}
+.g7{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;row-gap:8px}
+.dow{font-weight:700;padding:10px 0 14px}
+.day{min-height:62px;display:flex;flex-direction:column;align-items:center;color:#b6bac7;font-size:15px;background:none;border:0;font-family:inherit;padding:0}
+.day .n{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.day .t{font-size:12px;margin-top:4px;color:var(--link)}
+.day .off{font-size:12px;font-style:italic;text-decoration:line-through}
+.day .off2{font-size:13px}
+.day.ok{cursor:pointer}
+.day.ok .n{border:2px solid var(--day);color:var(--day)}
+.day.ok.sel .n{background:var(--day);color:#fff}
+.sel-txt{text-align:center;color:var(--muted);margin:24px 0 8px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin:24px 0}
+.bar.end{justify-content:flex-end}
+.lang{width:fit-content;margin:8px auto;border:1px solid var(--line);border-radius:4px;padding:8px 14px;font-size:14px}
+.tk{width:100%;border-collapse:collapse;font-size:15px}
+.tk th{font-weight:400;text-transform:uppercase;text-align:left;padding:16px 12px 10px;border-bottom:1px dotted #bbb}
+.tk td{padding:16px 12px;color:#555;border-bottom:1px dotted #ccc;vertical-align:middle}
+.tk .c{text-align:center}.tk .r{text-align:right}
+.tk select{width:54px;height:36px;border:0;border-radius:4px;background:var(--panel);padding:0 6px;font:inherit}
+.total{background:var(--panel);color:#2547e0;text-align:right;font-size:18px;padding:14px 12px;margin-top:20px}
+.timer{display:flex;justify-content:center;align-items:center;gap:8px;font-size:17px;margin:26px 0}
+.acc{background:var(--panel);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
+.acc b{display:block;font-size:13px}
+.acc .nm{color:var(--link);font-weight:700;font-size:15px;text-transform:uppercase}
+.acc.buyer{background:#c9cde0;margin-top:26px;font-weight:700;font-size:15px}
+.acc i{width:8px;height:8px;border-right:1.5px solid var(--link);border-bottom:1.5px solid var(--link);transform:rotate(45deg);margin-right:6px}
+.fields{padding:0 60px}
+.f{margin-bottom:18px}
+.f>label{display:block;color:var(--muted);font-size:15px;margin-bottom:8px}
+.f>label em{color:var(--red);font-style:normal;margin-left:3px}
+.f input[type=text],.f input[type=email],.f input[type=tel],.f select{width:100%;height:36px;border:1px solid var(--line);border-radius:4px;padding:0 12px;font:inherit;font-size:14px;color:var(--text);background:#fff}
+.f select{background:var(--panel);border-color:transparent}
+.f input:focus,.f select:focus,.tk select:focus{outline:2px solid #111}
+.f.err input,.f.err select,.f.err .tel{border-color:var(--red)}
+.msg{display:none;color:var(--red);font-size:12px;margin-top:4px}
+.f.err .msg{display:block}
+.dob{display:flex;gap:6px}.dob select{width:86px}
+.tel{display:flex;border:1px solid var(--line);border-radius:4px;height:36px;overflow:hidden}
+.tel .cc{display:flex;align-items:center;gap:6px;padding:0 10px}
+.tel .cc:after{content:"";border:3px solid transparent;border-top:4px solid #555;margin-top:4px}
+.tel input{border:0!important;flex:1;height:34px!important}
+.tel input::placeholder{color:#b0b4c0;font-style:italic}
+.chk{display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;margin:14px 0}
+.chk input{width:16px;height:16px;margin:0}
+.i{display:inline-flex;width:16px;height:16px;border-radius:50%;background:#000;color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;cursor:help}
+.secure{display:flex;align-items:center;gap:6px;width:fit-content;margin:20px auto;background:#000;color:#fff;border-radius:4px;padding:8px 12px;font-weight:700;font-size:12px}
+.foot h2{font-size:24px;margin:34px 0 10px}
+.foot a{color:var(--link);text-decoration:none}
+pre.out{background:#fff;border:1px solid var(--line);border-radius:4px;padding:12px;font-size:12px;overflow:auto;max-height:320px}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="head" id="head"><h1>Inscription TCF Canada sur Ordinateur (sans cours préparatoires) - Décembre 2026</h1><button class="btn" type="button">Billetterie</button></header>
+  <div class="test-banner"><b>Maquette de test FormPilot</b> : copie locale pour tester l’extension, ce n’est pas le site officiel et aucune donnée n’est envoyée.</div>
+  <section class="hero"><h1 id="hero-title">Inscription TCF Canada sur Ordinateur (sans cours préparatoires) - Décembre 2026</h1>
+    <p>À partir du 14 décembre 2026 à 08:00</p>
+    <p>Institut Français du Togo,<br>Avenue de Gaulle, face au Consulat de France,<br>BP 2090, Lomé<br>Togo</p></section>
+  <section class="desc"><h3>Description</h3>
+    <p>Ce questionnaire vous permet d’inscrire 1 seule personne au TCF Canada sur Ordinateur du 14 et 15 décembre 2026.</p>
+    <p><b>CE TEST SE FERA SUR ORDINATEUR</b><br>(Ne pas s’inscrire si vous ne maitrisez pas l’outil informatique)</p>
+    <p><b>CE TEST SE FERA EGALEMENT SANS COURS PREPARATOIRE</b><br>(Ne pas s’inscrire si vous désirez suivre des cours de préparation)</p><hr>
+    <p><b>REGLEMENT DES EXAMENS A L’INSTITUT FRANCAIS DU TOGO :</b></p>
+    <p>Les inscriptions groupées sont strictement interdites. Une fois la date d’examen choisie, vous devez sélectionner uniquement 1 billet pour poursuivre votre inscription.</p>
+    <p>1 billet = 1 questionnaire complété = 1 inscription / personne = 1 adresse mail personnelle = 1 numéro de téléphone personnel – Si vous inscrivez plusieurs personnes en sélectionnant plusieurs billets en même temps, nous ne prendrons en compte que le nom du titulaire du billet ; les autres ne seront pas inscrits pour le test et en cas de règlement, ils seront programmés d’office lors d’une des 2 sessions de report organisées par an.</p>
+    <p>Aucune modification sur votre identité (nom, prénom, date / lieu de naissance ou numéro de pièce d’identité) ne sera possible après votre inscription ci-dessous. Vos informations personnelles seront reportées exactement comme vous les avez communiquées lors de votre enregistrement sur ce site sur votre attestation finale. Veuillez donc les renseigner correctement lors de votre inscription en ligne.</p>
+    <p>Vous devez obligatoirement renseigner votre adresse mail et votre numéro de téléphone (et non celle de l’agence/ officine). L’IFT se réserve le droit d’annuler votre inscription si ces conditions ne sont pas remplies.</p>
+    <p>Les candidats en situation de handicap sont priés de nous informer par mail dès le début des inscriptions afin que les mesures adaptées soient prises en amont. Les frais d’inscription pour ces candidats seront payés uniquement après étude de leur cas et confirmation de leur inscription.</p>
+    <p>Le règlement des frais et l’envoi de votre dossier de paiement doivent être effectués dans les 48h.<br>Les paiements à l’étranger ne sont pas acceptés.<br>Les frais d’inscription ne sont pas remboursables.</p>
+    <p>Votre pièce d’identité (CNI ou Passeport) doit être scannée en couleur et valide au moins 1 mois après la date de l’examen. L’IFT se réserve la possibilité de scanner votre pièce d’identité pour l’envoyer aux services compétents afin de vérifier son authenticité. En cas de fraude, votre test sera annulé, aucun remboursement possible et votre dossier sera signalé aux autorités compétentes.</p>
+    <p>En cas de pièce d’identité étrangère, la présentation du titre de séjour, du visa ou du cachet d’entrée sera demandée et à défaut de cette présentation, votre inscription pourra être annulée et non remboursée.</p>
+    <p>L’Institut Français du TOGO demeure votre seul et unique interlocuteur durant chaque étape de votre inscription. Tout message / appel reçu d’un(e) quelconque particulier ou agence doit être signalé au plus vite.</p>
+    <p>En cas de maladie ou empêchement professionnel, vous devrez compléter le formulaire de demande de report téléchargeable sur notre site internet et le retourner au plus tard 48h avant le début de l’examen avec vos justificatifs (certificat médical, attestation de l’employeur…) afin de nous permettre, éventuellement de reporter votre inscription à l’une des 2 sessions de report organisées par an, uniquement sur ordinateur. Vous ne serez en aucun cas reporté sur une autre session que celle de report sur ordinateur.</p>
+    <p>Ce règlement s’applique à l’ensemble des personnes s’inscrivant aux examens proposés par l’Institut français du Togo.</p>
+    <p>En vous inscrivant à un test, vous acceptez de fait l’ensemble de ces règles.</p>
+    <p>Veuillez donc le lire attentivement car aucune dérogation à ce règlement ne sera tolérée.</p><hr>
+    <p>Le test comprend 4 épreuves obligatoires à savoir : compréhension orale, compréhension écrite, expression orale, expression écrite au tarif de 160 000 FCFA.</p>
+    <p>Il vous faudra donc :</p>
+    <p><b>1ère étape : Séance.</b><br>Choisir la date de l’examen dans la limite des places disponibles.</p>
+    <p><b>2ère étape : Panier.</b><br>Choisir la formule qui déteminera le montant à régler.</p>
+    <p><b>3ème étape et 4ème étape : Coordonnées et paiement</b><br>Remplir correctement vos coordonnées, préciser la date d’examen choisie et sélectionner le contenu de votre formule.</p>
+    <p><b>5ème étape : Confirmation</b><br>Recevoir la confirmation et télécharger votre billet.</p>
+    <p><b>Et après ?</b> Une fois votre billet émis et téléchargé, vous devez :</p>
+    <p>Payer aux guichets d’ORABANK domiciliés au TOGO (les paiements à l’étranger ne sont pas acceptés) les frais concernés (examen) ou (examen + cours) par dépôt en espèces :<br>- au nom du bénéficiaire : AG.CPT.INSTITUT FRANÇAIS<br>- sur le numéro du compte : TG116 01101 71853200102 85<br>- en mentionnant comme nom du déposant : votre nom et prénoms + date d’examen choisie + N° de billet</p>
+    <p>Nous envoyer dans les 48h un mail à l’adresse suivante à l’adresse suivante : reglement.examens@institutfrancais-togo.com avec l’objet « NOM + PRENOM + Paiement TCF Canada SO (sans cours) - Décembre 2026 » et votre dossier constitué d’un seul fichier PDF avec les 3 éléments suivants dans l’ordre : votre billet d’inscription + votre pièce d’identité valide au moins 1 mois après la fin de l’examen (CNI ou Passeport) + votre bordereau de paiement.</p>
+    <p>Recevoir une confirmation d’inscription à l’examen et/ou cours une fois votre dosssier traité. Vous ne devez pas répondre à ce mail automatique.</p>
+    <p><b>TOUT DOSSIER NE RESPECTANT PAS CES NORMES NE SERA PAS TRAITE</b></p></section>
+  <section id="billetterie">
+  <nav class="tabs" id="tabs"></nav>
+  <main id="app"></main></section>
+  <div class="foot">
+    <div class="secure"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="10" width="16" height="12" rx="2"/><path d="M7 10V7a5 5 0 0110 0v3" fill="none" stroke="#fff" stroke-width="3"/></svg>Paiement sécurisé</div>
+    <h2>Calendrier</h2>
+    <div>À partir du 14 décembre 2026 à 08:00</div>
+    <p><a href="#">Ajouter au calendrier</a></p>
+    <h2>Localisation</h2>
+    <div>Institut Français du Togo,<br>Avenue de Gaulle, face au Consulat de France,<br>BP 2090, Lomé<br>Togo</div>
+    <p><a href="#">Itinéraire</a></p>
+    <h2>Contact</h2><div>Institut Français du TOGO</div>
+    <h2>Partager</h2><div><a href="#">Facebook</a> &nbsp; <a href="#">X</a> &nbsp; <a href="#">E-mail</a></div>
+    <p style="margin-top:34px;color:var(--muted)">Propulsé par Weezevent &nbsp; <a href="#">Voir nos CGV</a></p>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const TABS=['Séance','Panier','Coordonnées','Paiement','Confirmation'];
+const TK=['Examen 160 000 FCFA'],MAXQ=1,DATES=[14,15],DOW={14:'lundi',15:'mardi'};
+/* Noms et ids volontairement opaques (q0, q1…) et sans autocomplete : seul le libellé identifie le champ.
+   Remplacez-les par les vrais name/id relevés dans les DevTools du site. */
+const FIELDS=[
+['civ','Civilité','select',['M.','Mme']],['nom','Nom','text'],['prenom','Prénom','text'],['dob','Date de naissance','dob'],
+['pays','Pays de naissance','text'],['ville','Ville','text'],['nat','Nationalité','text'],['langue','Langue usuelle','text'],
+['piece','Numéro de passeport ou carte nationale d’identité','text'],['email','E-mail','email'],['tel','Téléphone mobile','tel'],
+['adresse','Adresse','text'],['fonction','Fonction','text'],['exam','Date d’examen choisie','select',['','14 décembre 2026','15 décembre 2026']]];
+// Types de champs supportés par la fonction field()
+// 'select' - champ sélectionné avec <select>
+// 'text' - champ texte simple avec <input type="text">
+// 'dob' - date de naissance avec 3 selects (jour/mois/année)
+// 'email' - champ email avec validation
+// 'tel' - champ téléphone avec indicatif pays
+const S={};
+function reset(){clearInterval(S.tm);Object.assign(S,{step:1,day:null,qty:[0],people:[],ok:false,tried:false})}
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const opts=(a,v,ph)=>a.map(x=>`<option value="${x}"${String(x)===String(v)?' selected':''}>${x===''?ph:x}</option>`).join('');
+const togo='<svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#006a4e"/><rect y="2.8" width="20" height="2.8" fill="#ffce00"/><rect y="8.4" width="20" height="2.8" fill="#ffce00"/><rect width="8.4" height="8.4" fill="#d21034"/><polygon fill="#fff" points="4.2,1.9 4.73,3.47 6.39,3.49 5.06,4.48 5.55,6.06 4.2,5.1 2.85,6.06 3.34,4.48 2.01,3.49 3.67,3.47"/></svg>';
+const sessionTxt=()=>`${S.day}/12/2026 - 08:00`;
+const total=()=>S.qty.reduce((a,b)=>a+b,0);
 
-    <main>
-      <p class="hint">
-        Astuce : après remplissage, cliquez <strong>Afficher les valeurs</strong>
-        pour vérifier ce que FormPilot a saisi (aucun envoi réel).
-      </p>
+function field(p,[k,l,t,o],n){
+  const id=`a${p}_q${n}`,nm=`attendee[${p}][q${n}]`,v=S.people[p][k]??'';let c;
+  if(t==='select')c=`<select id="${id}" name="${nm}" data-k="${k}" data-p="${p}">${opts(o,v,'Votre choix')}</select>`;
+  else if(t==='dob'){const d=v||{};const days=['',...Array.from({length:31},(_,i)=>i+1)],ys=['',...Array.from({length:106},(_,i)=>2025-i)];
+    c=`<div class="dob"><select id="${id}d" name="${nm}[d]" data-k="dob" data-part="d" data-p="${p}">${opts(days,d.d,'Jour')}</select>`+
+    `<select id="${id}m" name="${nm}[m]" data-k="dob" data-part="m" data-p="${p}"><option value="">Mois</option>${MONTHS.map((m,i)=>`<option value="${i+1}"${String(i+1)===d.m?' selected':''}>${m}</option>`).join('')}</select>`+
+    `<select id="${id}y" name="${nm}[y]" data-k="dob" data-part="y" data-p="${p}">${opts(ys,d.y,'Année')}</select></div>`}
+  else if(t==='tel')c=`<div class="tel"><span class="cc">${togo}</span><input type="tel" id="${id}" name="${nm}" data-k="${k}" data-p="${p}" placeholder="90 11 23 45" value="${esc(v)}"></div>`;
+  else c=`<input type="${t}" id="${id}" name="${nm}" data-k="${k}" data-p="${p}" value="${esc(v)}">`;
+  return `<div class="f" data-k="${k}" data-p="${p}"><label for="${id}${t==='dob'?'d':''}">${l}<em>*</em></label>${c}<div class="msg">Ce champ est obligatoire.</div></div>`}
 
-      <form id="test-form" action="#" method="post" novalidate>
-        <section>
-          <h2>Identité</h2>
-          <div class="grid">
-            <label
-              >Civilité
-              <select name="civility" id="civility" autocomplete="honorific-prefix">
-                <option value="">—</option>
-                <option value="M.">M.</option>
-                <option value="Mme">Mme</option>
-                <option value="Mx">Mx</option>
-              </select>
-            </label>
-            <label
-              >Genre
-              <select name="gender" id="gender" autocomplete="sex">
-                <option value="">—</option>
-                <option value="femme">Femme</option>
-                <option value="homme">Homme</option>
-                <option value="autre">Autre</option>
-              </select>
-            </label>
-            <label
-              >Prénom
-              <input type="text" name="first_name" id="first_name" autocomplete="given-name" />
-            </label>
-            <label
-              >Nom
-              <input type="text" name="last_name" id="last_name" autocomplete="family-name" />
-            </label>
-            <label
-              >Date de naissance
-              <input type="date" name="birth_date" id="birth_date" autocomplete="bday" />
-            </label>
-            <label
-              >Nationalité
-              <input
-                type="text"
-                name="nationality"
-                id="nationality"
-                autocomplete="off"
-                placeholder="ex. Togolaise"
-              />
-            </label>
-          </div>
-        </section>
+const V={
+1(){const c=['<div></div>'];
+  for(let d=1;d<=31;d++)c.push(DATES.includes(d)?`<button type="button" class="day ok${S.day===d?' sel':''}" data-day="${d}"><span class="n">${d}</span><span class="t">08:00</span></button>`:`<div class="day"><span class="n">${d}</span></div>`);
+  return `<div class="panel title">1 - Sélectionnez une date</div>
+  <div class="cal-h"><h3>Décembre 2026</h3><div><span class="nav">‹ Novembre 2026</span> <span class="nav">Janvier 2027 ›</span></div></div>
+  <div class="g7">${['LUN','MAR','MER','JEU','VEN','SAM','DIM'].map(x=>`<div class="dow">${x}</div>`).join('')}${c.join('')}</div>
+  ${S.day?`<p class="sel-txt">Vous avez sélectionné la séance du<br>${DOW[S.day]} ${S.day} décembre 2026 08:00</p>`:''}
+  <div class="bar end"><button class="btn" type="button" id="next" data-go="1" ${S.day?'':'disabled'}>Suite</button></div>
+  <div class="lang">Français ▾</div>`},
+2(){return `<div class="panel">Date sélectionnée : <b>${sessionTxt()}</b></div>
+  <div class="panel hd">Sélectionnez vos billets</div>
+  <table class="tk"><thead><tr><th>Tarif</th><th class="c">Prix</th><th class="r">Quantité</th></tr></thead><tbody>
+  ${TK.map((t,i)=>`<tr><td>${t}</td><td class="c">Gratuit</td><td class="r"><select id="qty_${i}" data-qty="${i}">${Array.from({length:MAXQ+1},(_,i)=>i).map(x=>`<option${x===S.qty[i]?' selected':''}>${x}</option>`).join('')}</select></td></tr>`).join('')}
+  </tbody></table><div class="total">TOTAL (TTC) &nbsp; 0,00 €</div>
+  <div class="bar"><button class="btn alt" type="button" data-go="-1">Retour</button><button class="btn" type="button" id="next" data-go="1" ${total()?'':'disabled'}>Suite</button></div>`},
+3(){const tix=S.qty.flatMap((q,i)=>Array(q).fill(TK[i]));
+  return `<div class="panel">Date sélectionnée : <b>${sessionTxt()}</b></div>
+  <div class="panel">Merci de bien remplir les informations demandées. Vous recevrez un e-mail de confirmation.<br>Une pièce d’identité pourra vous être demandée à l’entrée de l’événement.</div>
+  <div class="timer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4"><circle cx="13" cy="14" r="7"/><path d="M13 14v-4M10 3h6M2 8h4M1 12h3"/></svg>Temps restant : <b id="timer"></b></div>
+  ${S.people.map((P,p)=>`<div class="acc"><div><span class="nm"></span><b>${tix[p]}</b></div><i></i></div><div class="fields">
+   ${FIELDS.map((f,n)=>field(p,f,n)).join('')}
+   <label class="chk"><input type="checkbox" id="a${p}_cx0" name="attendee[${p}][opt0]" data-k="epreuves" data-p="${p}"${P.epreuves?' checked':''}> 4 épreuves obligatoires (160 000 FCFA) <span class="i" title="Les 4 épreuves du TCF Canada">i</span></label></div>`).join('')}
+  <div class="bar end"><button class="btn" type="button" id="cont">Continuer</button></div>
+  <div class="acc buyer">Informations acheteur<i></i></div>
+  <div class="bar"><button class="btn alt" type="button" data-go="-1">Retour</button><button class="btn" type="button" id="next" data-go="1" ${S.ok?'':'disabled'}>Suite</button></div>`},
+4(){return `<div class="panel"><b>Paiement</b> — page de test, aucun paiement réel. Valeurs enregistrées par la page :</div><pre class="out">${esc(JSON.stringify(S.people,null,2))}</pre>
+  <div class="bar"><button class="btn alt" type="button" data-go="-1">Retour</button><button class="btn" type="button" data-go="1">Suite</button></div>`},
+5(){return `<div class="panel title">Confirmation</div><p style="text-align:center">Inscription fictive enregistrée. Aucun e-mail n’a été envoyé.</p>
+  <div class="bar end"><button class="btn" type="button" data-reset>Recommencer</button></div>`}
+};
 
-        <section>
-          <h2>Contact</h2>
-          <div class="grid">
-            <label class="full"
-              >E-mail
-              <input type="email" name="email" id="email" autocomplete="email" />
-            </label>
-            <label
-              >Téléphone mobile
-              <input type="tel" name="phone_mobile" id="phone_mobile" autocomplete="tel" />
-            </label>
-            <label
-              >Téléphone fixe
-              <input type="tel" name="phone_home" id="phone_home" autocomplete="tel-local" />
-            </label>
-          </div>
-        </section>
+function render(){
+  $('#tabs').innerHTML=TABS.map((t,i)=>`<div class="${i+1===S.step?'on':''}">${S.step===1?`<small>${i+1}</small>`:''}${t}</div>`).join('');
+  app.innerHTML=V[S.step]();
+  if(S.step===3){names();tick()}
+}
+function go(n){S.step=n;clearInterval(S.tm);
+  if(n===3){S.people=Array.from({length:total()},(_,i)=>S.people[i]||{civ:'M.',dob:{},exam:''});S.ok=false;S.tried=false;startTimer()}
+  render();$('#billetterie').scrollIntoView()}
+function names(){document.querySelectorAll('.nm').forEach((el,i)=>{const p=S.people[i];el.textContent=[p.prenom,p.nom].filter(Boolean).join(' ').toUpperCase()||'Participant '+(i+1)})}
+function startTimer(){S.left=900;S.tm=setInterval(()=>{S.left--;if(S.left<=0){clearInterval(S.tm);alert('Temps écoulé : votre panier a été libéré.');reset();render();return}tick()},1000)}
+function tick(){const el=$('#timer');if(!el)return;const m=S.left/60|0,s=S.left%60;el.textContent=`${m} minute${m>1?'s':''} ${s} seconde${s>1?'s':''}`}
+function isOk(P,k){const v=P[k];if(k==='dob')return !!(v&&v.d&&v.m&&v.y);if(k==='email')return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v||'');return !!String(v||'').trim()}
+function mark(){document.querySelectorAll('.f').forEach(f=>f.classList.toggle('err',!isOk(S.people[f.dataset.p],f.dataset.k)))}
 
-        <section>
-          <h2>Adresse</h2>
-          <div class="grid">
-            <label class="full"
-              >Adresse
-              <input
-                type="text"
-                name="address_line1"
-                id="address_line1"
-                autocomplete="address-line1"
-              />
-            </label>
-            <label class="full"
-              >Complément d’adresse
-              <input
-                type="text"
-                name="address_line2"
-                id="address_line2"
-                autocomplete="address-line2"
-              />
-            </label>
-            <label
-              >Code postal
-              <input
-                type="text"
-                name="postal_code"
-                id="postal_code"
-                autocomplete="postal-code"
-              />
-            </label>
-            <label
-              >Ville
-              <input type="text" name="city" id="city" autocomplete="address-level2" />
-            </label>
-            <label
-              >Région
-              <input type="text" name="region" id="region" autocomplete="address-level1" />
-            </label>
-            <label
-              >Pays
-              <select name="country" id="country" autocomplete="country">
-                <option value="">—</option>
-                <option value="TG">Togo</option>
-                <option value="FR">France</option>
-                <option value="BJ">Bénin</option>
-                <option value="CI">Côte d’Ivoire</option>
-                <option value="SN">Sénégal</option>
-                <option value="CA">Canada</option>
-              </select>
-            </label>
-          </div>
-        </section>
-
-        <section>
-          <h2>Entreprise / professionnel</h2>
-          <div class="grid">
-            <label
-              >Entreprise
-              <input
-                type="text"
-                name="company_name"
-                id="company_name"
-                autocomplete="organization"
-              />
-            </label>
-            <label
-              >Poste
-              <input
-                type="text"
-                name="job_title"
-                id="job_title"
-                autocomplete="organization-title"
-              />
-            </label>
-            <label
-              >SIRET
-              <input type="text" name="siret" id="siret" inputmode="numeric" />
-            </label>
-            <label
-              >N° TVA
-              <input type="text" name="vat_number" id="vat_number" />
-            </label>
-            <label class="full"
-              >IBAN
-              <input type="text" name="iban" id="iban" autocomplete="off" />
-            </label>
-          </div>
-        </section>
-
-        <section>
-          <h2>Documents d’identité</h2>
-          <div class="grid">
-            <label
-              >N° passeport
-              <input type="text" name="passport_number" id="passport_number" />
-            </label>
-            <label
-              >N° carte d’identité
-              <input type="text" name="id_card_number" id="id_card_number" />
-            </label>
-            <label
-              >Date d’émission
-              <input type="date" name="id_issue_date" id="id_issue_date" />
-            </label>
-            <label
-              >Date d’expiration
-              <input type="date" name="id_expiry_date" id="id_expiry_date" />
-            </label>
-          </div>
-        </section>
-
-        <div class="actions">
-          <button type="submit">Afficher les valeurs</button>
-          <button type="reset">Vider le formulaire</button>
-        </div>
-      </form>
-
-      <pre id="result" aria-live="polite"></pre>
-    </main>
-
-    <script>
-      const form = document.getElementById('test-form');
-      const result = document.getElementById('result');
-
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const data = Object.fromEntries(new FormData(form).entries());
-        result.textContent = JSON.stringify(data, null, 2);
-        result.classList.add('visible');
-      });
-
-      form.addEventListener('reset', () => {
-        result.classList.remove('visible');
-        result.textContent = '';
-      });
-    </script>
-  </body>
+/* L’état ne se met à jour que sur les événements input/change : comme avec un formulaire React,
+   une valeur posée via .value sans événement est ignorée à la validation. */
+function sync(e){const t=e.target;
+  if(t.dataset.qty!==undefined){S.qty[t.dataset.qty]=+t.value;const n=$('#next');if(n)n.disabled=!total();return}
+  const k=t.dataset.k;if(!k)return;const P=S.people[t.dataset.p],v=t.type==='checkbox'?t.checked:t.value;
+  if(t.dataset.part)(P[k]=P[k]||{})[t.dataset.part]=v;else P[k]=v;
+  if(k==='nom'||k==='prenom')names();
+  if(S.tried)mark()}
+app.addEventListener('input',sync);app.addEventListener('change',sync);
+app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.day){S.day=+b.dataset.day;render()}
+  else if(b.dataset.go)go(S.step+ +b.dataset.go);
+  else if(b.hasAttribute('data-reset')){reset();render()}
+  else if(b.id==='cont'){S.tried=true;mark();S.ok=S.people.every(P=>FIELDS.every(f=>isOk(P,f[0])));$('#next').disabled=!S.ok;if(!S.ok){const x=document.querySelector('.f.err');if(x)x.scrollIntoView({block:'center',behavior:'smooth'})}}});
+new IntersectionObserver(([e])=>$('#head').classList.toggle('show',!e.isIntersecting)).observe($('#hero-title'));
+$('#head button').onclick=()=>$('#billetterie').scrollIntoView({behavior:'smooth'});
+reset();render();
+</script>
+</body>
 </html>

@@ -276,7 +276,8 @@ export default function App() {
       return;
     }
     await setKeepUnlocked(keepUnlocked);
-    const { recoveryKey } = await createVault(password);
+    // createVault is now idempotent - no password needed, just initialize if not exists
+    const { recoveryKey } = await createVault();
     setView({ kind: 'recovery', recoveryKey });
     setPassword('');
     setPassword2('');
@@ -284,9 +285,9 @@ export default function App() {
 
   const handleUnlock = useCallback(async () => {
     setError('');
-    const ok = await unlockVault(password);
+    const ok = await unlockVault();
     if (!ok) {
-      setError('Mot de passe incorrect.');
+      setError('Vault not initialized.');
       return;
     }
     const vault = await loadVault();

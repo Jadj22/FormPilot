@@ -1,7 +1,8 @@
 import {
-  detectFields,
+  classifyFields,
   getRawField,
   refreshFieldCache,
+  getDetectionResults,
 } from '~/lib/detection/classify';
 import {
   applyFileValue,
@@ -41,36 +42,44 @@ function applyLearnedMappings(
   mappings: LearnedMapping[] = [],
 ): DetectedField[] {
   if (!mappings || mappings.length === 0) return fields;
-  const hostMappings = mappings.filter((m) =>
-    hostname === m.hostname || hostname.endsWith(`.${m.hostname}`),
-  );
-  if (hostMappings.length === 0) return fields;
 
+  // Use the new rules-based detection from the detection module
   return fields.map((f) => {
-    // 1. Chercher par name exact
-    let hit = f.name
-      ? hostMappings.find((m) => m.fieldSignature === `name:${f.name?.toLowerCase().trim()}`)
-      : undefined;
+    // Try learned mappings first, but also consider new signaling
+    const hostMappings = mappings.filter((m) =>
+      m.hostname === hostname || m.hostname === '*',
+    );
 
-    // 2. Chercher par id exact
-    if (!hit && f.id) {
-      hit = hostMappings.find((m) => m.fieldSignature === `id:${f.id?.toLowerCase().trim()}`);
-    }
+    if (hostMappings.length === 0) return f;
 
-    // 3. Chercher par label
-    if (!hit && f.label) {
-      hit = hostMappings.find((m) => m.fieldSignature === `label:${f.label.toLowerCase().trim()}`);
-    }
+    // Check for learned mapping match
+    const hit = hostMappings.find((m) => {
+      // Match by normalized label using new signaling
+      if (m.fieldSignature && f.label) {
+        const normalizedLabel = f.label.toLowerCase().trim();
+        return normalizedLabel.includes(m.fieldSignature.toLowerCase());
+      }
+      return false;
+    });
 
     if (hit) {
+      // Use learned type but also check confidence with new signaling
+      const newClassification = classifyField(
+        document.createElement('div'),
+        f.label || '',
+      );
+      const effectiveType = newClassification.type || hit.type;
+      const effectiveConfidence = Math.max(hit.confidence, newClassification.confidence);
+
       return {
         ...f,
-        type: hit.type,
-        confidence: 100,
-        selected: true,
+        type: effectiveType,
+        confidence: effectiveConfidence,
+        selected: effectiveConfidence >= 70,
         isLearned: true,
       };
     }
+
     return f;
   });
 }
@@ -82,13 +91,17 @@ function reclassifyWithSiteRules(
   if (!isWeezeventHost(hostname)) return fields;
   return fields.map((f) => {
     if (f.isLearned) return f;
-    const hit = classifyWeezevent(f.label);
-    if (hit) {
+    // Use the new multi-signaling classifyField instead of simple pattern matching
+    const newClassification = classifyField(
+      document.createElement('div'),
+      f.label || '',
+    );
+    if (newClassification.type) {
       return {
         ...f,
-        type: hit.type,
-        confidence: Math.max(f.confidence, 90),
-        selected: true,
+        type: newClassification.type,
+        confidence: Math.max(f.confidence, newClassification.confidence),
+        selected: newClassification.confidence >= 70,
       };
     }
     return f;
@@ -293,7 +306,8 @@ function scheduleFloatingButton(): void {
 
 export default defineContentScript({
   matches: ['<all_urls>'],
-  allFrames: false,
+  allFrames: true,
+
   runAt: 'document_idle',
   async main(ctx) {
     browser.runtime.onMessage.addListener(
@@ -301,9 +315,12 @@ export default defineContentScript({
         (async () => {
           try {
             if (message.type === 'DETECT') {
-              sendResponse(await handleDetect(message.learnedMappings));
+              // Use new multi-signaling detection pipeline
+              const detected = await startDetectionLib(document, ctx?.url?.hostname ?? '', message.learnedMappings);
+              sendResponse(await getDetectionResults(detected));
             } else if (message.type === 'FILL') {
-              sendResponse(await handleFill(message.items, message.profile));
+              // Use new fill pipeline with detected fields
+              sendResponse(await handleFillNew(message.items, message.profile));
             } else if (message.type === 'UNDO') {
               sendResponse(handleUndo());
             } else if (message.type === 'STATUS') {

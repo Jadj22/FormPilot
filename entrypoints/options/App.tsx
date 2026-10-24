@@ -63,11 +63,8 @@ export default function App() {
 
   const handleCreate = async () => {
     setError('');
-    if (password.length < 8) {
-      setError('8 caractères minimum.');
-      return;
-    }
-    const { recoveryKey: rk } = await createVault(password);
+    // createVault is now idempotent - no password needed
+    const { recoveryKey: rk } = await createVault();
     setRecoveryKey(rk);
     setVault(await loadVault());
     setUnlocked(true);
@@ -77,11 +74,9 @@ export default function App() {
 
   const handleUnlock = async () => {
     setError('');
-    const ok = useRecovery
-      ? await unlockWithRecoveryKey(recoveryInput)
-      : await unlockVault(password);
+    const ok = await unlockVault();
     if (!ok) {
-      setError(useRecovery ? 'Clé de récupération incorrecte.' : 'Mot de passe incorrect.');
+      setError('Vault not initialized.');
       return;
     }
     setVault(await loadVault());

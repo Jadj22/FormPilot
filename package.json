@@ -31,6 +31,7 @@
     "@types/node": "^26.6.5",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@wxt-dev/auto-icons": "^1.1.2",
     "@wxt-dev/module-react": "1.1.5",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4.1.11",
