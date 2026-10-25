@@ -1,4 +1,5 @@
 import type { Profile, SemanticType } from '../types';
+import { findDateOption, getDatePart } from '../datePart';
 import { normalizeForType, toDateISO } from '../normalize';
 
 export function resolveValue(
@@ -46,6 +47,17 @@ export function applyValue(
   rawValue: string,
 ): boolean {
   if (el instanceof HTMLSelectElement) {
+    // Date en trois listes (Jour / Mois / Année) : on place la bonne partie
+    const datePart = getDatePart(el);
+    const iso = datePart ? toDateISO(rawValue) : null;
+    if (datePart && iso) {
+      const [year, month, day] = iso.split('-').map(Number) as [number, number, number];
+      const option = findDateOption(el, datePart, { day, month, year });
+      if (!option) return false;
+      setSelectValue(el, option.value);
+      return true;
+    }
+
     const options = Array.from(el.options);
     const normalized = rawValue.trim().toLowerCase();
     // 1. Correspondance exacte

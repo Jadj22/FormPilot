@@ -186,7 +186,7 @@ export default function App() {
 
   const handleImport = async () => {
     setError('');
-    const ok = await importVault(importText, importPassword);
+    const ok = await importVault(importText);
     if (!ok) {
       setError('Import invalide ou mot de passe incorrect.');
       return;
@@ -210,7 +210,7 @@ export default function App() {
 
   if (recoveryKey && unlocked) {
     return (
-      <div className="mx-auto w-[28rem] max-w-full space-y-4 p-10">
+      <div className="mx-auto w-md max-w-full space-y-4 p-10">
         <h1 className="text-xl font-semibold">Clé de récupération</h1>
         <p className="text-sm text-amber-400">
           Notez cette clé et conservez-la en lieu sûr. Sans mot de passe ni clé, vos
@@ -239,7 +239,7 @@ export default function App() {
 
   if (!initialized || !unlocked || !vault) {
     return (
-      <div className="mx-auto w-[28rem] max-w-full space-y-4 p-10">
+      <div className="mx-auto w-md max-w-full space-y-4 p-10">
         <h1 className="text-xl font-semibold">FormPilot — Options</h1>
         {!initialized ? (
           <>
@@ -336,7 +336,7 @@ export default function App() {
   const availableTypes = FIELD_TYPES.filter((t) => !usedTypes.has(t));
 
   return (
-    <div className="mx-auto flex w-[48rem] max-w-full gap-8 p-10">
+    <div className="mx-auto flex w-3xl max-w-full gap-8 p-10">
       <aside className="w-64 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Profils</h1>
@@ -672,4 +672,4 @@ export default function App() {
       </main>
     </div>
   );
-}
+}

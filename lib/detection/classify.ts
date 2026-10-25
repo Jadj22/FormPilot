@@ -1,6 +1,13 @@
 import type { DetectedField, SemanticType } from '../types';
-import { AUTOCOMPLETE_MAP, normalizeLabel, isAuthorizedType, calculateScore, applyNegativeRules, NAME_ID_PATTERNS, NEGATIVE_RULES, AUTHORIZED_SEMANTIC_TYPES } from './rules';
-import { DICT_RULES } from './dictionary';
+import { dateGroupLabel } from '../datePart';
+import { AUTOCOMPLETE_MAP, DICT_RULES } from './dictionary';
+import {
+  NAME_ID_PATTERNS,
+  applyNegativeRules,
+  calculateConfidence,
+  isAuthorizedType,
+  normalizeLabel,
+} from './rules';
 
 export interface RawField {
   el: HTMLElement;
@@ -67,7 +74,16 @@ function labelTextFor(el: HTMLElement): string {
     const text = previous.textContent?.trim();
     if (text && text.length < 80) parts.push(text);
   }
-  return parts
+  // Date en trois listes (Jour / Mois / Année) : le libellé est sur la 1re liste
+  if (el instanceof HTMLSelectElement) {
+    const group = dateGroupLabel(el);
+    if (group) parts.push(group);
+  }
+  // Un même texte (ex. <label for> + <label> voisin) ne doit compter qu'une fois
+  const unique = parts
+    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .filter((p, i, all) => p && all.indexOf(p) === i);
+  return unique
     .filter(Boolean)
     .join(' ')
     .replace(/\s+/g, ' ')
@@ -93,123 +109,99 @@ export interface ScoredClassification {
   confidence: number;
 }
 
+/** Type sémantique suggéré par le type HTML de l'input (signal faible). */
+function getTypeFromInputType(type: string): SemanticType | null {
+  switch (type) {
+    case 'email':
+      return 'email';
+    case 'tel':
+      return 'phoneMobile';
+    case 'date':
+      return 'birthDate';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Mots qui identifient un champ à eux seuls mais que le dictionnaire ne couvre pas
+ * (ex. « Nom » tout court). Le libellé contient aussi name/id, donc on cherche le
+ * mot entier n'importe où et non au début.
+ */
+const LABEL_WORD_RULES: ReadonlyArray<readonly [SemanticType, RegExp, number]> = [
+  ['lastName', /\bnom\b/, 70],
+];
+
+function toAlnum(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export function classifyField(el: HTMLElement, label: string): ScoredClassification {
   const scores = new Map<SemanticType, number>();
-
-  // 1. Signal autocomplete (100 points s'il correspond exactement)
-  const autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
-  if (autocomplete && AUTOCOMPLETE_MAP[autocomplete]) {
-    scores.set(AUTOCOMPLETE_MAP[autocomplete], 100);
-  }
-
-  // 2. Signal type d'input (type HTML)
-  const inputType = (el.getAttribute('type') || 'text').toLowerCase();
-  const typeFromInput = getTypeFromInputType(inputType);
-  if (typeFromInput && !scores.has(typeFromInput)) {
-    scores.set(typeFromInput, 30); // 30 points pour type compatible
-  } else if (typeFromInput && scores.has(typeFromInput)) {
-    scores.set(typeFromInput, scores.get(typeFromInput)! + 30);
-  }
-
-  // 3. Signal libellé via règles DICT (weights variables)
-  const haystack = normalizeLabel(label);
-  if (scores.size === 0 || haystack) {
-    for (const r of DICT_RULES) {
-      if (r.pattern.test(haystack)) {
-        const current = scores.get(r.type) ?? 0;
-        scores.set(r.type, Math.max(current, Math.round(r.weight * 100)));
-      }
-    }
-  }
-
-  // 4. Signal name/id correspondant
-  const name = (el.getAttribute('name') || '').toLowerCase();
-  const id = (el.getAttribute('id') || '').toLowerCase();
-  for (const [type, patterns] of Object.entries(NAME_ID_PATTERNS)) {
-    if (patterns.includes(name) || patterns.includes(id)) {
-      const current = scores.get(type as SemanticType) ?? 0;
-      scores.set(type as SemanticType, Math.max(current, 25)); // 25 points
-    }
-  }
-
-  // 5. Signal label text direct (matching précis)
-  const labelNormalized = normalizeLabel(label);
-  for (const [type, pattern] of [
-    ['firstName', /^(prenom|given|firstname)/],
-    ['lastName', /^(nom|surname|lastname)/],
-    ['email', /^email|mail|courriel/],
-    ['phone', /^(tel|phone|mobile)/],
-    ['address', /^(adresse|street)/],
-    ['city', /^(ville|city)/],
-    ['country', /^(pays|country)/],
-    ['birthDate', /^(date.*naiss|dob)/],
-  ]) {
-    if (pattern.test(labelNormalized)) {
-      const current = scores.get(type as SemanticType) ?? 0;
-      scores.set(type as SemanticType, Math.max(current, 35));
-    }
-  }
-
-  // 6. Appliquer les règles négatives (exclusions)
-  const matchedNegatives: SemanticType[] = [];
-  for (const rule of NEGATIVE_RULES) {
-    if (rule.pattern.test(labelNormalized)) {
-      matchedNegatives.push(rule.type);
-    }
-  }
-  // Vérifications spécifiques par type
-  if (typeFromInput === 'email' && /adresse|street/.test(labelNormalized)) {
-    matchedNegatives.push('exclude');
-  }
-  if (typeFromInput === 'phone' && /email|mail/.test(labelNormalized)) {
-    matchedNegatives.push('exclude');
-  }
-
-  // Appliquer les pénalités négatives
-  let finalScore = 0;
-  for (const [type, score] of scores) {
-    if (!isAuthorizedType(type as string)) continue;
-    let typeScore = score;
-    if (matchedNegatives.includes(type)) {
-      typeScore = applyNegativeRules(score, [type]);
-    }
-    if (typeScore > finalScore) {
-      finalScore = typeScore;
-    }
-  }
-
-  // Déterminer le niveau de confiance
-  let confidence: number;
-  if (finalScore >= 70) confidence = 100;
-  else if (finalScore >= 40) confidence = 70;
-  else if (finalScore >= 20) confidence = 40;
-  else confidence = 0;
-
-  // Trouver le type gagnant
-  let best: SemanticType | null = null;
-  for (const [type, score] of scores) {
-    if (!isAuthorizedType(type as string)) continue;
-    if (score >= finalScore || (finalScore > 0 && !best)) {
-      best = type;
-      finalScore = score;
-    }
-  }
-
-  /**
- * Détermine le type sémantique à partir du type HTML de l'entrée
- */
-function getTypeFromInputType(type: string): SemanticType | null {
-  const map: Record<string, SemanticType> = {
-    'text': null,
-    'email': 'email',
-    'tel': 'phoneMobile',
-    'number': null,
-    'date': 'birthDate',
-    'search': null,
-    'url': null,
-    'password': null,
+  const bump = (type: SemanticType, score: number) => {
+    scores.set(type, Math.max(scores.get(type) ?? 0, score));
   };
-  return map[type] || null;
+
+  const labelNormalized = normalizeLabel(label);
+  const inputType = (el.getAttribute('type') || 'text').toLowerCase();
+
+  // 1. Attribut autocomplete (100 points s'il correspond exactement)
+  const autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
+  const fromAutocomplete = AUTOCOMPLETE_MAP[autocomplete];
+  if (fromAutocomplete) bump(fromAutocomplete, 100);
+
+  // 2. Type HTML de l'input : +30 (plafonné à 100)
+  const typeFromInput = getTypeFromInputType(inputType);
+  if (typeFromInput) {
+    scores.set(typeFromInput, Math.min(100, (scores.get(typeFromInput) ?? 0) + 30));
+  }
+
+  // 3. Libellé via le dictionnaire (poids variables)
+  if (labelNormalized) {
+    for (const r of DICT_RULES) {
+      if (r.pattern.test(labelNormalized)) bump(r.type, Math.round(r.weight * 100));
+    }
+  }
+
+  // 4. Attributs name / id
+  const nameId = [el.getAttribute('name'), el.getAttribute('id')]
+    .filter((v): v is string => !!v)
+    .map(toAlnum);
+  if (nameId.length > 0) {
+    for (const { type, names } of NAME_ID_PATTERNS) {
+      if (names.some((n) => nameId.includes(n))) bump(type, 25);
+    }
+  }
+
+  // 5. Mots entiers dans le libellé
+  for (const [type, pattern, score] of LABEL_WORD_RULES) {
+    if (pattern.test(labelNormalized)) bump(type, score);
+  }
+
+  // 6. Pénalités : règles négatives + incohérences avec le type HTML
+  const adjusted: Array<{ type: SemanticType; score: number }> = [];
+  for (const [type, rawScore] of scores) {
+    if (!isAuthorizedType(type)) continue;
+    let score = applyNegativeRules(type, rawScore, labelNormalized);
+    if (inputType === 'email' && type === 'addressLine1') score -= 60;
+    if (inputType === 'tel' && type === 'email') score -= 50;
+    adjusted.push({ type, score: Math.max(0, score) });
+  }
+
+  // 7. Type gagnant
+  adjusted.sort((a, b) => b.score - a.score);
+  const best = adjusted[0];
+  if (!best || best.score <= 0) return { type: null, confidence: 0 };
+
+  let bestScore = best.score;
+  const second = adjusted[1];
+  // Égalité entre deux types : on baisse la confiance
+  if (second && second.score === bestScore && bestScore < 80) {
+    bestScore = Math.max(40, bestScore - 25);
+  }
+
+  const confidence = calculateConfidence(bestScore);
+  return { type: confidence > 0 ? best.type : null, confidence };
 }
 
 export function getFieldSignature(el: HTMLElement, label: string): string {

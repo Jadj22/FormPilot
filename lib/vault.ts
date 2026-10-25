@@ -71,7 +71,7 @@ export function lock(): void {
   autoLockTimer = null;
 }
 
-export async function unlockVault(password: string): Promise<boolean> {
+export async function unlockVault(_password?: string): Promise<boolean> {
   // In the simplified vault, unlock is always successful if the vault is initialized.
   // The password is accepted for backwards compatibility but no crypto is used.
   const initialized = await isVaultInitialized();
@@ -129,7 +129,7 @@ export async function createVault(): Promise<{ recoveryKey: string }> {
   }
   const recoveryKey = generateRecoveryKey();
   await db.vault.put({ id: VAULT_ID, data: JSON.stringify(emptyVault()) });
-  sessionProfile = await db.vault.get(VAULT_ID);
+  sessionProfile = (await db.vault.get(VAULT_ID)) ?? null;
   return { recoveryKey };
 }
 
@@ -196,13 +196,13 @@ export async function importVault(json: string): Promise<boolean> {
   } catch {
     return false;
   }
-  if (parsed.format !== 'formpilot-vault' || !parsed.data) {
+  if (parsed?.format !== 'formpilot-vault' || typeof parsed.data !== 'string') {
     return false;
   }
-  sessionProfile = await db.vault.put({
-    id: VAULT_ID,
-    data: parsed.data,
-  });
+  // Dexie put() renvoie la clé, pas la ligne : on construit la ligne nous-mêmes.
+  const row: VaultRow = { id: VAULT_ID, data: parsed.data };
+  await db.vault.put(row);
+  sessionProfile = row;
   return true;
 }
 
@@ -211,4 +211,4 @@ function scheduleAutoLock(): void {
   autoLockTimer = setTimeout(() => {
     sessionProfile = null;
   }, AUTO_LOCK_MINUTES * 60 * 1000);
-}
+}

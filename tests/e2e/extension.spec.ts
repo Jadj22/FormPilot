@@ -67,7 +67,12 @@ test.describe('FormPilot E2E', () => {
 
       const addField = async (label: string, value: string) => {
         await optionsPage.locator('select').selectOption({ label });
-        await optionsPage.locator('main input').last().fill(value);
+        // On exclut les inputs fichier (pièces jointes) et cases à cocher (langues),
+        // qui viennent après les champs texte dans le DOM.
+        await optionsPage
+          .locator('main input:not([type="file"]):not([type="checkbox"])')
+          .last()
+          .fill(value);
       };
       await addField('Prénom(s)', 'Awa');
       await addField('Nom', 'Dupont');
